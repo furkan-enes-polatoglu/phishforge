@@ -74,27 +74,31 @@ This is **not** a spam-filter evasion tool — every technique here is legitimat
 email infrastructure, the same things a real ESP does to protect its sender
 reputation.
 
-## Mailgun integration (bounce/complaint feedback loop)
+## Mailgun bounce/complaint feedback loop
 
-Raw SMTP sending is fire-and-forget: a `250 OK` only means the relay *accepted*
-the message, not that it reached the inbox. PhishForge closes that loop for
-Mailgun specifically:
+A sending profile is just standard SMTP host/port/username/password — plug in
+credentials from Mailgun (or any other server) and it works, no
+provider-specific code involved. Raw SMTP is fire-and-forget, though: a
+`250 OK` only means the relay *accepted* the message, not that it reached the
+inbox. For Mailgun specifically, PhishForge closes that loop:
 
-- **Mailgun HTTP API sending** — a per-sending-profile provider option, using
-  Mailgun's officially recommended integration instead of SMTP AUTH relay.
-  Mailgun's own open/click tracking is disabled (`o:tracking=no`) so it never
-  rewrites links or injects its own pixel on top of PhishForge's tracking.
-- **Signed webhook receiver** (`/webhooks/mailgun`, HMAC-verified) ingests
-  `delivered` / `failed` (bounce) / `complained` events in real time, matched
-  back to the exact target via a custom variable — visible in the campaign
-  report as **delivered / bounced / complained** counts, not just "sent."
-- **Automatic reputation-safety pause** — if a campaign's complaint rate
-  exceeds 0.3% or bounce rate exceeds 5% (once at least 20 sends have a
-  result), PhishForge stops the campaign immediately and logs why. A burnt
-  sending domain silently damages every future engagement that reuses it;
-  this catches it while it's happening instead of after a report is read.
-- Raw SMTP profiles work too, including **Mailgun's own SMTP relay** — the
-  HTTP API path is simply the more thoroughly integrated option.
+- Every outbound message carries an `X-Mailgun-Variables` header with a
+  correlation id — a header Mailgun recognizes on plain SMTP submissions (no
+  API integration required) and echoes back on webhook events.
+- A **signed webhook receiver** (`POST /webhooks/mailgun`, HMAC-verified
+  against your Mailgun webhook signing key) ingests `delivered` / `failed`
+  (bounce) / `complained` events in real time, matched back to the exact
+  target via that correlation id — visible in the campaign report as
+  **delivered / bounced / complained** counts, not just "sent."
+- **Automatic reputation-safety pause** — once a campaign has at least 20
+  sends with a result, a complaint rate above 0.3% or a bounce rate above 5%
+  stops it immediately and logs why. A burnt sending domain silently damages
+  every future engagement that reuses it; this catches it while it's
+  happening instead of after a report is read.
+
+Set `MAILGUN_WEBHOOK_SIGNING_KEY` (from Mailgun's dashboard: Sending →
+Webhooks → Signing key) and point Mailgun's webhooks at
+`https://<your-phish-domain>/webhooks/mailgun`.
 
 ## Pretext realism vs. authentication — the honest tradeoff
 
@@ -232,7 +236,7 @@ docker compose down -v              # stop and wipe all data
 5. **Build assets** — email template (merge-tags: `{{.FirstName}}`, `{{.TrackURL}}`,
    `{{.QRCodeURL}}`, `{{.AttachmentURL}}`, `{{.ReportURL}}`) and a landing page
    (form posts to `{{.SubmitURL}}`; capture behavior is configured per page).
-6. **Create a sending profile** — SMTP or Mailgun API credentials, DKIM key generation, optional `X-Mailer`.
+6. **Create a sending profile** — SMTP credentials (works with Mailgun's SMTP relay or any other server), DKIM key generation, optional `X-Mailer`.
 7. **Run the deliverability check** — Delivery Confidence Score, and the
    target-gateway detection to get allowlisted before you send.
 8. **Create & launch a campaign** — the worker sends at your configured rate

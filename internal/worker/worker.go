@@ -218,26 +218,15 @@ func (w *Worker) processLaunch(ctx context.Context, job queue.LaunchJob) error {
 		// (SpoofedFromAddress) while the envelope/DKIM identity always stays
 		// the sending profile's own authenticated address — see Message's
 		// doc comment for why this split exists and what it does to alignment.
-		var sendErr error
-		if profile.Provider == "mailgun_api" {
-			mg := NewMailgunClient(profile.MailgunAPIKey, profile.MailgunDomain)
-			_, sendErr = mg.Send(ctx, MailgunSendParams{
-				From: profile.FromAddress, FromName: profile.FromName,
-				HeaderFrom: c.SpoofedFromAddress, HeaderFromName: c.SpoofedFromName,
-				To: t.Email, Subject: subject, HTML: htmlBody, Text: textBody,
-				ReplyTo: c.ReplyTo, CampaignTargetID: ct.ID.String(),
-			})
-		} else {
-			msg := Message{
-				From: profile.FromAddress, FromName: profile.FromName,
-				HeaderFrom: c.SpoofedFromAddress, HeaderFromName: c.SpoofedFromName,
-				To: t.Email, Subject: subject, HTML: htmlBody, Text: textBody,
-				Unsubscribe: data.ReportURL, XMailer: profile.XMailer, ReplyTo: c.ReplyTo,
-			}
-			sendErr = Send(profile, msg)
+		msg := Message{
+			From: profile.FromAddress, FromName: profile.FromName,
+			HeaderFrom: c.SpoofedFromAddress, HeaderFromName: c.SpoofedFromName,
+			To: t.Email, Subject: subject, HTML: htmlBody, Text: textBody,
+			Unsubscribe: data.ReportURL, XMailer: profile.XMailer, ReplyTo: c.ReplyTo,
+			Variables: map[string]string{"cid": ct.ID.String()},
 		}
-		if sendErr != nil {
-			_ = w.st.SetCampaignTargetStatus(ctx, ct.ID, "error", sendErr.Error())
+		if err := Send(profile, msg); err != nil {
+			_ = w.st.SetCampaignTargetStatus(ctx, ct.ID, "error", err.Error())
 			continue
 		}
 		_ = w.st.SetCampaignTargetStatus(ctx, ct.ID, "sent", "")

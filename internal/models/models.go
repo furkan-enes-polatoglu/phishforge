@@ -96,15 +96,8 @@ type SendingProfile struct {
 	DKIMSelector   string `json:"dkim_selector"`
 	DKIMPrivateKey string `json:"-"` // never serialized
 	SignDKIM       bool   `json:"sign_dkim"`
-	XMailer        string `json:"x_mailer"` // realistic mail-client header, e.g. "Microsoft Outlook 16.0"
-	// Provider selects the send path: "smtp" (raw SMTP relay, works with any
-	// server including Mailgun's SMTP relay) or "mailgun_api" (Mailgun's HTTP
-	// API — the officially recommended integration: better delivery feedback,
-	// tagging, and no SMTP-timeout risk).
-	Provider      string    `json:"provider"`
-	MailgunAPIKey string    `json:"-"` // never serialized
-	MailgunDomain string    `json:"mailgun_domain"`
-	CreatedAt     time.Time `json:"created_at"`
+	XMailer        string    `json:"x_mailer"` // realistic mail-client header, e.g. "Microsoft Outlook 16.0"
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Target struct {

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -45,6 +46,14 @@ type Message struct {
 	Unsubscribe    string // optional List-Unsubscribe URL
 	XMailer        string // optional realistic mail-client header (deliverability)
 	ReplyTo        string // optional Reply-To, independent of the display From
+	// Variables carries a correlation key (e.g. {"cid": campaignTargetID}) as an
+	// X-Mailgun-Variables header. Mailgun recognizes this header on plain SMTP
+	// submissions (no API integration needed) and echoes it back as
+	// "user-variables" on delivered/bounced/complained webhooks — this is what
+	// lets the webhook receiver match a bounce back to the right target even
+	// though sending went through standard SMTP. Harmless, ignored extra header
+	// on any non-Mailgun server.
+	Variables map[string]string
 }
 
 func domainOf(addr string) string {
@@ -78,6 +87,11 @@ func (m Message) Build() string {
 	}
 	if m.XMailer != "" {
 		b.WriteString("X-Mailer: " + m.XMailer + "\r\n")
+	}
+	if len(m.Variables) > 0 {
+		if j, err := json.Marshal(m.Variables); err == nil {
+			b.WriteString("X-Mailgun-Variables: " + string(j) + "\r\n")
+		}
 	}
 	if m.Unsubscribe != "" {
 		b.WriteString("List-Unsubscribe: <" + m.Unsubscribe + ">\r\n")

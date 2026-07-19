@@ -11,22 +11,19 @@ import (
 
 // ---- Sending profiles ----
 
-const sendingProfileCols = `id,org_id,name,smtp_host,smtp_port,username,from_address,from_name,use_tls,dkim_domain,dkim_selector,sign_dkim,x_mailer,provider,mailgun_domain,created_at`
+const sendingProfileCols = `id,org_id,name,smtp_host,smtp_port,username,from_address,from_name,use_tls,dkim_domain,dkim_selector,sign_dkim,x_mailer,created_at`
 
 func scanSendingProfile(row interface{ Scan(...any) error }, p *models.SendingProfile) error {
 	return row.Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.FromAddress, &p.FromName,
-		&p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.SignDKIM, &p.XMailer, &p.Provider, &p.MailgunDomain, &p.CreatedAt)
+		&p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.SignDKIM, &p.XMailer, &p.CreatedAt)
 }
 
 func (s *Store) CreateSendingProfile(ctx context.Context, p *models.SendingProfile) error {
-	if p.Provider == "" {
-		p.Provider = "smtp"
-	}
 	return s.pool.QueryRow(ctx,
-		`INSERT INTO sending_profiles(org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,x_mailer,provider,mailgun_api_key,mailgun_domain)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id, created_at`,
+		`INSERT INTO sending_profiles(org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,x_mailer)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id, created_at`,
 		p.OrgID, p.Name, p.SMTPHost, p.SMTPPort, p.Username, p.Password, p.FromAddress, p.FromName, p.UseTLS,
-		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, p.XMailer, p.Provider, p.MailgunAPIKey, p.MailgunDomain,
+		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, p.XMailer,
 	).Scan(&p.ID, &p.CreatedAt)
 }
 
@@ -48,14 +45,14 @@ func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]mod
 	return out, rows.Err()
 }
 
-// GetSendingProfileFull includes secrets (password + DKIM key + Mailgun API key); worker/internal use only.
+// GetSendingProfileFull includes secrets (password + DKIM key); worker/internal use only.
 func (s *Store) GetSendingProfileFull(ctx context.Context, orgID, id uuid.UUID) (*models.SendingProfile, error) {
 	var p models.SendingProfile
 	err := s.pool.QueryRow(ctx,
-		`SELECT id,org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,x_mailer,provider,mailgun_api_key,mailgun_domain,created_at
+		`SELECT id,org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,x_mailer,created_at
 		 FROM sending_profiles WHERE org_id=$1 AND id=$2`, orgID, id,
 	).Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.Password, &p.FromAddress, &p.FromName, &p.UseTLS,
-		&p.DKIMDomain, &p.DKIMSelector, &p.DKIMPrivateKey, &p.SignDKIM, &p.XMailer, &p.Provider, &p.MailgunAPIKey, &p.MailgunDomain, &p.CreatedAt)
+		&p.DKIMDomain, &p.DKIMSelector, &p.DKIMPrivateKey, &p.SignDKIM, &p.XMailer, &p.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -66,14 +63,11 @@ func (s *Store) GetSendingProfileFull(ctx context.Context, orgID, id uuid.UUID) 
 }
 
 func (s *Store) UpdateSendingProfile(ctx context.Context, orgID uuid.UUID, p *models.SendingProfile) error {
-	if p.Provider == "" {
-		p.Provider = "smtp"
-	}
 	ct, err := s.pool.Exec(ctx,
-		`UPDATE sending_profiles SET name=$1,smtp_host=$2,smtp_port=$3,username=$4,password=$5,from_address=$6,from_name=$7,use_tls=$8,dkim_domain=$9,dkim_selector=$10,dkim_private_key=$11,sign_dkim=$12,x_mailer=$13,provider=$14,mailgun_api_key=$15,mailgun_domain=$16
-		 WHERE org_id=$17 AND id=$18`,
+		`UPDATE sending_profiles SET name=$1,smtp_host=$2,smtp_port=$3,username=$4,password=$5,from_address=$6,from_name=$7,use_tls=$8,dkim_domain=$9,dkim_selector=$10,dkim_private_key=$11,sign_dkim=$12,x_mailer=$13
+		 WHERE org_id=$14 AND id=$15`,
 		p.Name, p.SMTPHost, p.SMTPPort, p.Username, p.Password, p.FromAddress, p.FromName, p.UseTLS,
-		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, p.XMailer, p.Provider, p.MailgunAPIKey, p.MailgunDomain, orgID, p.ID)
+		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, p.XMailer, orgID, p.ID)
 	if err != nil {
 		return err
 	}

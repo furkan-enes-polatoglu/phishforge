@@ -152,15 +152,6 @@ const dict: Record<string, { tr: string; en: string }> = {
   generate_dkim: { tr: "DKIM anahtarı üret", en: "Generate DKIM key" },
   dkim_dns_record: { tr: "Bu TXT kaydını DNS'e ekleyin:", en: "Add this TXT record to DNS:" },
   sign_with_dkim: { tr: "Gönderimleri DKIM ile imzala", en: "Sign messages with DKIM" },
-  provider: { tr: "Gönderim yöntemi", en: "Sending method" },
-  provider_smtp: { tr: "SMTP (herhangi bir sunucu, Mailgun SMTP dahil)", en: "SMTP (any server, including Mailgun's SMTP relay)" },
-  provider_mailgun_api: { tr: "Mailgun HTTP API (önerilen)", en: "Mailgun HTTP API (recommended)" },
-  mailgun_api_key: { tr: "Mailgun API anahtarı", en: "Mailgun API key" },
-  mailgun_domain: { tr: "Mailgun alan adı", en: "Mailgun domain" },
-  mailgun_help: {
-    tr: "Mailgun'un resmi olarak önerdiği entegrasyon yöntemi: ham SMTP'ye göre daha güvenilir, gerçek teslimat geri bildirimi (delivered/bounced/complained) alır. Kendi tıklama/açılma takibimizle çakışmaması için Mailgun'un kendi tracking'i otomatik kapatılır.",
-    en: "Mailgun's officially recommended integration: more reliable than raw SMTP, gets real delivery feedback (delivered/bounced/complained). Mailgun's own tracking is disabled automatically so it doesn't conflict with ours.",
-  },
   spoofed_from: { tr: "Görünen gönderen (pretext)", en: "Display sender (pretext)" },
   spoofed_from_help: {
     tr: "Gerçek bir e-posta adresini birebir görünen \"Kimden\" alanında gösterebilirsiniz. Teknik gönderim (SPF/DKIM) her zaman gönderim profilinin kendi alan adında kalır. Görünen adres farklı bir alan adındaysa DMARC hizalaması hedefte BAŞARISIZ olur — güvenilir teslimat için Teslimat sayfasındaki \"Hedef Mail Ağ Geçidi Tespiti\" ile bu gönderim altyapısını beyaz listeye aldırmanız gerekir.",

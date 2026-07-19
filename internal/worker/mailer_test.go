@@ -45,3 +45,22 @@ func TestBuildOmitsReplyToWhenEmpty(t *testing.T) {
 		t.Errorf("expected no Reply-To header when unset, got:\n%s", raw)
 	}
 }
+
+func TestBuildIncludesMailgunVariablesForWebhookCorrelation(t *testing.T) {
+	m := Message{
+		From: "it@acme-test.com", To: "bob@corp.com", Subject: "Hi", HTML: "x",
+		Variables: map[string]string{"cid": "abc-123"},
+	}
+	raw := m.Build()
+	if !strings.Contains(raw, `X-Mailgun-Variables: {"cid":"abc-123"}`) {
+		t.Errorf("expected X-Mailgun-Variables header for webhook correlation, got:\n%s", raw)
+	}
+}
+
+func TestBuildOmitsMailgunVariablesWhenEmpty(t *testing.T) {
+	m := Message{From: "it@acme-test.com", To: "bob@corp.com", Subject: "Hi", HTML: "x"}
+	raw := m.Build()
+	if strings.Contains(raw, "X-Mailgun-Variables:") {
+		t.Errorf("expected no X-Mailgun-Variables header when unset, got:\n%s", raw)
+	}
+}
