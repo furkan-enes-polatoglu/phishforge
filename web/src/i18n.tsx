@@ -120,6 +120,7 @@ const dict: Record<string, { tr: string; en: string }> = {
   sending_profiles: { tr: "Gönderim profilleri", en: "Sending profiles" },
   live_preview: { tr: "Canlı önizleme", en: "Live preview" },
   open_full_tab: { tr: "Tam ekran, yeni sekmede aç", en: "Open full-screen in new tab" },
+  preview_sample_note: { tr: "Örnek verilerle gösteriliyor (gerçek gönderimde asıl bilgiler kullanılır)", en: "Shown with sample data (real sends use actual values)" },
   subject: { tr: "Konu", en: "Subject" },
   merge_tags: { tr: "Birleştirme etiketleri", en: "Merge-tags" },
   qr_insert_hint: { tr: "QR kod (quishing) eklemek için: ", en: "To insert a QR code (quishing): " },

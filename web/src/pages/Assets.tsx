@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
-import { openHtmlInNewTab } from "../utils";
+import { openHtmlInNewTab, renderPreviewHtml } from "../utils";
 
 type Tab = "email" | "landing" | "profiles";
 
@@ -27,15 +27,24 @@ export default function Assets() {
 
 function Preview({ html }: { html: string }) {
   const { t } = useI18n();
+  const [rendered, setRendered] = useState(html);
+  useEffect(() => {
+    let cancelled = false;
+    renderPreviewHtml(html).then((out) => { if (!cancelled) setRendered(out); });
+    return () => { cancelled = true; };
+  }, [html]);
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <div className="label !mb-0">{t("live_preview")}</div>
-        <button type="button" className="btn-ghost btn-sm" onClick={() => openHtmlInNewTab(html)}>
+        <div>
+          <div className="label !mb-0">{t("live_preview")}</div>
+          <p className="text-[11px] muted">{t("preview_sample_note")}</p>
+        </div>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => openHtmlInNewTab(rendered)}>
           ↗ {t("open_full_tab")}
         </button>
       </div>
-      <iframe title="preview" srcDoc={html} className="h-[36rem] w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
+      <iframe title="preview" srcDoc={rendered} className="h-[36rem] w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
     </div>
   );
 }

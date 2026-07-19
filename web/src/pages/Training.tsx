@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
-import { openHtmlInNewTab } from "../utils";
+import { openHtmlInNewTab, renderPreviewHtml } from "../utils";
 
 export default function Training() {
   const { t } = useI18n();
@@ -11,6 +11,12 @@ export default function Training() {
   const [f, setF] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
+  const [rendered, setRendered] = useState(f.html);
+  useEffect(() => {
+    let cancelled = false;
+    renderPreviewHtml(f.html).then((out) => { if (!cancelled) setRendered(out); });
+    return () => { cancelled = true; };
+  }, [f.html]);
 
   async function load() {
     const [m, a] = await Promise.all([api("training-modules"), api("training-assignments")]);
@@ -52,11 +58,11 @@ export default function Training() {
           <div>
             <div className="mb-1 flex items-center justify-between">
               <div className="label !mb-0">{t("preview")}</div>
-              <button type="button" className="btn-ghost btn-sm" onClick={() => openHtmlInNewTab(f.html)}>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => openHtmlInNewTab(rendered)}>
                 ↗ {t("open_full_tab")}
               </button>
             </div>
-            <iframe title="training-preview" srcDoc={f.html} className="h-[32rem] w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
+            <iframe title="training-preview" srcDoc={rendered} className="h-[32rem] w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
           </div>
           <div className="card">
             <div className="section-title mb-2">{t("modules")} ({modules.length})</div>
