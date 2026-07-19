@@ -78,8 +78,26 @@ func (s *Server) Router() http.Handler {
 			r.Post("/sending-profiles", s.requireRole("operator", s.handleCreateSendingProfile))
 
 			r.Post("/campaigns/{id}/launch", s.requireRole("operator", s.handleLaunchCampaign))
+			r.Post("/campaigns/{id}/stop", s.requireRole("operator", s.handleStopCampaign))
+			r.Delete("/campaigns/{id}", s.requireRole("operator", s.handleDeleteCampaign))
 			r.Get("/campaigns/{id}/report", s.handleCampaignReport)
 			r.Get("/campaigns/{id}/timeline", s.handleCampaignTimeline)
+			r.Get("/campaigns/{id}/variants", s.handleListVariants)
+			r.Post("/campaigns/{id}/variants", s.requireRole("operator", s.handleAddVariant))
+
+			r.Get("/engagements/{id}/risk", s.handleRiskScores)
+
+			r.Get("/training-modules", s.handleListTraining)
+			r.Post("/training-modules", s.requireRole("operator", s.handleCreateTraining))
+			r.Get("/training-assignments", s.handleTrainingAssignments)
+
+			r.Get("/api-keys", s.handleListAPIKeys)
+			r.Post("/api-keys", s.requireRole("admin", s.handleCreateAPIKey))
+			r.Delete("/api-keys/{id}", s.requireRole("admin", s.handleRevokeAPIKey))
+
+			r.Get("/webhooks", s.handleListWebhooks)
+			r.Post("/webhooks", s.requireRole("operator", s.handleCreateWebhook))
+			r.Delete("/webhooks/{id}", s.requireRole("operator", s.handleDeleteWebhook))
 
 			r.Post("/deliverability/check", s.requireRole("operator", s.handleDeliverabilityCheck))
 

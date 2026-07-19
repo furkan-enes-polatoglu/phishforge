@@ -117,13 +117,16 @@ type EmailTemplate struct {
 }
 
 type LandingPage struct {
-	ID          uuid.UUID `json:"id"`
-	OrgID       uuid.UUID `json:"org_id"`
-	Name        string    `json:"name"`
-	HTML        string    `json:"html"`
-	CaptureMeta bool      `json:"capture_meta"` // capture which fields were filled (never values)
-	RedirectURL string    `json:"redirect_url"` // awareness training page
-	CreatedAt   time.Time `json:"created_at"`
+	ID   uuid.UUID `json:"id"`
+	OrgID uuid.UUID `json:"org_id"`
+	Name string    `json:"name"`
+	HTML string    `json:"html"`
+	// Capture controls (GoPhish-parity, explicit opt-in):
+	CaptureMeta          bool `json:"capture_meta"`           // capture which field NAMES were filled (never values)
+	CaptureSubmittedData bool `json:"capture_submitted_data"` // capture submitted field values
+	CapturePasswords     bool `json:"capture_passwords"`      // also capture password-like values (sensitive)
+	RedirectURL          string    `json:"redirect_url"`      // awareness training page
+	CreatedAt            time.Time `json:"created_at"`
 }
 
 type CampaignStatus string
@@ -133,29 +136,95 @@ const (
 	CampaignScheduled CampaignStatus = "scheduled"
 	CampaignRunning   CampaignStatus = "running"
 	CampaignDone      CampaignStatus = "completed"
+	CampaignStopped   CampaignStatus = "stopped"
 )
 
 type Campaign struct {
-	ID              uuid.UUID      `json:"id"`
-	EngagementID    uuid.UUID      `json:"engagement_id"`
-	Name            string         `json:"name"`
-	EmailTemplateID uuid.UUID      `json:"email_template_id"`
-	LandingPageID   uuid.UUID      `json:"landing_page_id"`
-	SendingProfileID uuid.UUID     `json:"sending_profile_id"`
-	Status          CampaignStatus `json:"status"`
-	LaunchAt        *time.Time     `json:"launch_at"`
-	RatePerMinute   int            `json:"rate_per_minute"`
-	CreatedAt       time.Time      `json:"created_at"`
+	ID               uuid.UUID      `json:"id"`
+	EngagementID     uuid.UUID      `json:"engagement_id"`
+	Name             string         `json:"name"`
+	EmailTemplateID  uuid.UUID      `json:"email_template_id"`
+	LandingPageID    uuid.UUID      `json:"landing_page_id"`
+	SendingProfileID uuid.UUID      `json:"sending_profile_id"`
+	Status           CampaignStatus `json:"status"`
+	LaunchAt         *time.Time     `json:"launch_at"`
+	RatePerMinute    int            `json:"rate_per_minute"`
+	// Advanced sending controls
+	SendWindowStart  int  `json:"send_window_start"`  // local hour 0..23
+	SendWindowEnd    int  `json:"send_window_end"`    // local hour 1..24 (exclusive)
+	BusinessDaysOnly bool `json:"business_days_only"` // skip weekends
+	JitterSeconds    int  `json:"jitter_seconds"`     // random extra delay per send
+	WarmupBatch      int  `json:"warmup_batch"`       // max sends per scheduler cycle (0 = unlimited)
+	RewriteLinks     bool `json:"rewrite_links"`      // auto-rewrite anchors to tracked links
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// InSendWindow reports whether "now" (in the given location) is within the
+// campaign's allowed send window and, optionally, on a business day.
+func (c Campaign) InSendWindow(now time.Time) bool {
+	h := now.Hour()
+	if c.SendWindowEnd > c.SendWindowStart {
+		if h < c.SendWindowStart || h >= c.SendWindowEnd {
+			return false
+		}
+	}
+	if c.BusinessDaysOnly {
+		switch now.Weekday() {
+		case time.Saturday, time.Sunday:
+			return false
+		}
+	}
+	return true
+}
+
+type CampaignVariant struct {
+	ID              uuid.UUID `json:"id"`
+	CampaignID      uuid.UUID `json:"campaign_id"`
+	Name            string    `json:"name"`
+	EmailTemplateID uuid.UUID `json:"email_template_id"`
+	Weight          int       `json:"weight"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type TrainingModule struct {
+	ID        uuid.UUID `json:"id"`
+	OrgID     uuid.UUID `json:"org_id"`
+	Name      string    `json:"name"`
+	HTML      string    `json:"html"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type TrainingAssignment struct {
+	ID          uuid.UUID  `json:"id"`
+	TargetID    uuid.UUID  `json:"target_id"`
+	ModuleID    uuid.UUID  `json:"module_id"`
+	CampaignID  *uuid.UUID `json:"campaign_id"`
+	Status      string     `json:"status"`
+	Token       string     `json:"token"`
+	AssignedAt  time.Time  `json:"assigned_at"`
+	CompletedAt *time.Time `json:"completed_at"`
+}
+
+type APIKey struct {
+	ID         uuid.UUID  `json:"id"`
+	OrgID      uuid.UUID  `json:"org_id"`
+	Name       string     `json:"name"`
+	Prefix     string     `json:"prefix"`
+	Role       Role       `json:"role"`
+	CreatedAt  time.Time  `json:"created_at"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+	Revoked    bool       `json:"revoked"`
 }
 
 // CampaignTarget links a campaign to a target and carries the signed tracking id.
 type CampaignTarget struct {
-	ID         uuid.UUID `json:"id"`
-	CampaignID uuid.UUID `json:"campaign_id"`
-	TargetID   uuid.UUID `json:"target_id"`
-	RID        string    `json:"rid"`    // opaque HMAC-signed id used in tracking links
-	Status     string    `json:"status"` // pending|sent|error
-	Error      string    `json:"error,omitempty"`
+	ID         uuid.UUID  `json:"id"`
+	CampaignID uuid.UUID  `json:"campaign_id"`
+	TargetID   uuid.UUID  `json:"target_id"`
+	VariantID  *uuid.UUID `json:"variant_id,omitempty"`
+	RID        string     `json:"rid"`    // opaque HMAC-signed id used in tracking links
+	Status     string     `json:"status"` // pending|sent|error
+	Error      string     `json:"error,omitempty"`
 }
 
 // EventType captures the phishing-simulation funnel.

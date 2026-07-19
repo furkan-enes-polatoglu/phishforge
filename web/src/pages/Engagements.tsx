@@ -49,11 +49,11 @@ export default function Engagements() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Engagements</h1>
-      {err && <div className="rounded bg-red-900/40 px-3 py-2 text-sm text-red-200">{err}</div>}
+      <h1 className="text-2xl font-bold">Engagements</h1>
+      {err && <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#fee2e2", color: "#991b1b" }}>{err}</div>}
 
       <form onSubmit={create} className="card grid gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-2 text-sm font-medium text-slate-200">New engagement (authorization record)</div>
+        <div className="sm:col-span-2 section-title">New engagement (authorization record)</div>
         <div>
           <label className="label">Client name</label>
           <input className="input" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} required />
@@ -89,9 +89,9 @@ export default function Engagements() {
           <tbody>
             {list.map((e) => (
               <tr key={e.id}>
-                <td className="font-medium">{e.client_name}</td>
-                <td className="text-slate-400">{e.authz_ref}</td>
-                <td className="text-slate-400">
+                <td className="font-semibold">{e.client_name}</td>
+                <td className="muted">{e.authz_ref}</td>
+                <td className="muted">
                   {new Date(e.starts_at).toLocaleDateString()} → {new Date(e.ends_at).toLocaleDateString()}
                 </td>
                 <td>
@@ -106,7 +106,7 @@ export default function Engagements() {
             ))}
             {list.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center text-slate-500">
+                <td colSpan={5} className="text-center muted">
                   No engagements yet.
                 </td>
               </tr>
@@ -120,12 +120,12 @@ export default function Engagements() {
 
 export function StatusBadge({ status }: { status: string }) {
   const cls: Record<string, string> = {
-    active: "bg-emerald-900 text-emerald-200",
-    draft: "bg-slate-700 text-slate-200",
-    closed: "bg-slate-800 text-slate-400",
-    running: "bg-sky-900 text-sky-200",
-    scheduled: "bg-amber-900 text-amber-200",
-    completed: "bg-emerald-900 text-emerald-200",
+    active: "badge-green",
+    draft: "badge-gray",
+    closed: "badge-gray",
+    running: "badge-blue",
+    scheduled: "badge-amber",
+    completed: "badge-green",
   };
-  return <span className={`badge ${cls[status] || "bg-slate-700 text-slate-200"}`}>{status}</span>;
+  return <span className={`badge ${cls[status] || "badge-gray"}`}>{status}</span>;
 }

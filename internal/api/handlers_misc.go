@@ -13,11 +13,13 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			active++
 		}
 	}
+	funnel, _ := s.st.OrgFunnel(r.Context(), p.OrgID)
 	writeJSON(w, http.StatusOK, map[string]any{
-		"org_id":              p.OrgID,
-		"engagements_total":   len(engagements),
-		"engagements_active":  active,
-		"role":                p.Role,
+		"org_id":             p.OrgID,
+		"engagements_total":  len(engagements),
+		"engagements_active": active,
+		"role":               p.Role,
+		"funnel":             funnel,
 	})
 }
 

@@ -9,6 +9,8 @@ import Assets from "./pages/Assets";
 import CampaignReport from "./pages/CampaignReport";
 import Deliverability from "./pages/Deliverability";
 import Audit from "./pages/Audit";
+import Training from "./pages/Training";
+import Settings from "./pages/Settings";
 
 interface Me {
   email: string;
@@ -18,53 +20,53 @@ interface Me {
 function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const loc = useLocation();
   const nav = [
-    { to: "/", label: "Dashboard" },
-    { to: "/engagements", label: "Engagements" },
-    { to: "/assets", label: "Assets" },
-    { to: "/deliverability", label: "Deliverability" },
-    { to: "/audit", label: "Audit" },
+    { to: "/", label: "Dashboard", icon: "📊" },
+    { to: "/engagements", label: "Engagements", icon: "🎯" },
+    { to: "/assets", label: "Assets", icon: "✉️" },
+    { to: "/training", label: "Training", icon: "🎓" },
+    { to: "/deliverability", label: "Deliverability", icon: "📬" },
+    { to: "/settings", label: "Settings", icon: "⚙️" },
+    { to: "/audit", label: "Audit", icon: "📝" },
   ];
+  const active = (to: string) =>
+    loc.pathname === to || (to !== "/" && loc.pathname.startsWith(to));
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-800 bg-slate-950/60">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-          <span className="text-lg font-semibold">🎣 PhishForge</span>
-          <nav className="flex gap-1">
-            {nav.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`rounded-md px-3 py-1.5 text-sm ${
-                  loc.pathname === n.to || (n.to !== "/" && loc.pathname.startsWith(n.to))
-                    ? "bg-slate-800 text-white"
-                    : "text-slate-300 hover:bg-slate-800/50"
-                }`}
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex items-center gap-3 text-sm text-slate-400">
-            <span>
-              {me.email} · <span className="badge bg-sky-900 text-sky-200">{me.role}</span>
-            </span>
-            <button className="btn-ghost" onClick={onLogout}>
-              Log out
-            </button>
+    <div className="flex min-h-screen">
+      <aside className="sidebar">
+        <div className="mb-6 flex items-center gap-2 px-2 text-lg font-bold text-white">
+          <span className="grid h-9 w-9 place-items-center rounded-lg" style={{ background: "rgba(255,255,255,0.14)" }}>🎣</span>
+          PhishForge
+        </div>
+        <nav className="flex flex-1 flex-col gap-1">
+          {nav.map((n) => (
+            <Link key={n.to} to={n.to} className={active(n.to) ? "side-link side-active" : "side-link"}>
+              <span className="text-base">{n.icon}</span> {n.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="mt-4 border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+          <div className="px-2 text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>{me.email}</div>
+          <div className="mt-1 flex items-center justify-between px-2">
+            <span className="badge badge-blue">{me.role}</span>
+            <button className="side-logout" onClick={onLogout}>Log out</button>
           </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/engagements" element={<Engagements />} />
-          <Route path="/engagements/:id" element={<EngagementDetail />} />
-          <Route path="/assets" element={<Assets />} />
-          <Route path="/campaigns/:id" element={<CampaignReport />} />
-          <Route path="/deliverability" element={<Deliverability />} />
-          <Route path="/audit" element={<Audit />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
+      </aside>
+      <main className="flex-1 overflow-x-hidden px-6 py-6">
+        <div className="mx-auto max-w-5xl">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/engagements" element={<Engagements />} />
+            <Route path="/engagements/:id" element={<EngagementDetail />} />
+            <Route path="/assets" element={<Assets />} />
+            <Route path="/training" element={<Training />} />
+            <Route path="/campaigns/:id" element={<CampaignReport />} />
+            <Route path="/deliverability" element={<Deliverability />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/audit" element={<Audit />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
       </main>
     </div>
   );

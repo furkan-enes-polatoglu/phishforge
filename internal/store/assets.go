@@ -131,18 +131,24 @@ func (s *Store) GetEmailTemplate(ctx context.Context, orgID, id uuid.UUID) (*mod
 
 // ---- Landing pages ----
 
+const landingCols = `id,org_id,name,html,capture_meta,capture_submitted_data,capture_passwords,redirect_url,created_at`
+
+func scanLanding(row interface{ Scan(...any) error }, l *models.LandingPage) error {
+	return row.Scan(&l.ID, &l.OrgID, &l.Name, &l.HTML, &l.CaptureMeta,
+		&l.CaptureSubmittedData, &l.CapturePasswords, &l.RedirectURL, &l.CreatedAt)
+}
+
 func (s *Store) CreateLandingPage(ctx context.Context, l *models.LandingPage) error {
 	return s.pool.QueryRow(ctx,
-		`INSERT INTO landing_pages(org_id,name,html,capture_meta,redirect_url)
-		 VALUES($1,$2,$3,$4,$5) RETURNING id, created_at`,
-		l.OrgID, l.Name, l.HTML, l.CaptureMeta, l.RedirectURL,
+		`INSERT INTO landing_pages(org_id,name,html,capture_meta,capture_submitted_data,capture_passwords,redirect_url)
+		 VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id, created_at`,
+		l.OrgID, l.Name, l.HTML, l.CaptureMeta, l.CaptureSubmittedData, l.CapturePasswords, l.RedirectURL,
 	).Scan(&l.ID, &l.CreatedAt)
 }
 
 func (s *Store) ListLandingPages(ctx context.Context, orgID uuid.UUID) ([]models.LandingPage, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id,org_id,name,html,capture_meta,redirect_url,created_at
-		 FROM landing_pages WHERE org_id=$1 ORDER BY created_at DESC`, orgID)
+		`SELECT `+landingCols+` FROM landing_pages WHERE org_id=$1 ORDER BY created_at DESC`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +156,7 @@ func (s *Store) ListLandingPages(ctx context.Context, orgID uuid.UUID) ([]models
 	out := []models.LandingPage{}
 	for rows.Next() {
 		var l models.LandingPage
-		if err := rows.Scan(&l.ID, &l.OrgID, &l.Name, &l.HTML, &l.CaptureMeta, &l.RedirectURL, &l.CreatedAt); err != nil {
+		if err := scanLanding(rows, &l); err != nil {
 			return nil, err
 		}
 		out = append(out, l)
@@ -160,10 +166,8 @@ func (s *Store) ListLandingPages(ctx context.Context, orgID uuid.UUID) ([]models
 
 func (s *Store) GetLandingPage(ctx context.Context, orgID, id uuid.UUID) (*models.LandingPage, error) {
 	var l models.LandingPage
-	err := s.pool.QueryRow(ctx,
-		`SELECT id,org_id,name,html,capture_meta,redirect_url,created_at
-		 FROM landing_pages WHERE org_id=$1 AND id=$2`, orgID, id,
-	).Scan(&l.ID, &l.OrgID, &l.Name, &l.HTML, &l.CaptureMeta, &l.RedirectURL, &l.CreatedAt)
+	err := scanLanding(s.pool.QueryRow(ctx,
+		`SELECT `+landingCols+` FROM landing_pages WHERE org_id=$1 AND id=$2`, orgID, id), &l)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}

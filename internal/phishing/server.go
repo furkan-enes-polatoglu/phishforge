@@ -43,6 +43,7 @@ func (s *Server) Router() http.Handler {
 	r.Get("/l/{rid}", s.handleClick)
 	r.Post("/l/{rid}", s.handleSubmit)
 	r.Get("/r/{rid}", s.handleReport)
+	r.Get("/training/{token}", s.handleTraining)
 	return r
 }
 
@@ -93,6 +94,7 @@ func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 		CampaignTargetID: ct.ID, Type: models.EventClick,
 		IP: clientIP(r), UserAgent: r.UserAgent(),
 	})
+	s.notifyEvent(c.ID, "click", t.Email)
 	lp, err := s.st.LandingPageByCampaign(r.Context(), c.ID)
 	if err != nil {
 		writeAwareness(w)
@@ -105,38 +107,68 @@ func (s *Server) handleClick(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	rid := chi.URLParam(r, "rid")
-	ct, c, _, ok := s.resolve(r.Context(), rid)
+	ct, c, t, ok := s.resolve(r.Context(), rid)
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
 	lp, _ := s.st.LandingPageByCampaign(r.Context(), c.ID)
 
-	// DATA MINIMIZATION: never store submitted values. Optionally capture the set
-	// of field NAMES that were provided (excluding any value).
+	// Capture behavior is controlled per landing page (GoPhish-parity, opt-in):
+	//   - default: store only the fact of submission (no field data)
+	//   - capture_meta: also store which field NAMES were filled (no values)
+	//   - capture_submitted_data: store field values (password-like fields redacted
+	//       unless capture_passwords is also on)
+	//   - capture_passwords: also store password-like values (sensitive!)
 	meta := "{}"
-	if lp != nil && lp.CaptureMeta {
+	if lp != nil && (lp.CaptureMeta || lp.CaptureSubmittedData) {
 		_ = r.ParseForm()
-		var names []string
-		for k, vs := range r.PostForm {
-			for _, v := range vs {
-				if strings.TrimSpace(v) != "" {
-					names = append(names, k)
-					break
+		out := map[string]any{}
+		if lp.CaptureMeta {
+			var names []string
+			for k, vs := range r.PostForm {
+				for _, v := range vs {
+					if strings.TrimSpace(v) != "" {
+						names = append(names, k)
+						break
+					}
 				}
 			}
+			sort.Strings(names)
+			out["fields_filled"] = names
 		}
-		sort.Strings(names)
-		b, _ := json.Marshal(map[string]any{"fields_filled": names})
+		if lp.CaptureSubmittedData {
+			submitted := map[string]string{}
+			for k, vs := range r.PostForm {
+				if len(vs) == 0 {
+					continue
+				}
+				val := vs[0]
+				if isPasswordField(k) && !lp.CapturePasswords {
+					val = "[redacted]"
+				}
+				submitted[k] = val
+			}
+			out["submitted"] = submitted
+			out["captured_passwords"] = lp.CapturePasswords
+		}
+		b, _ := json.Marshal(out)
 		meta = string(b)
 	}
 	_ = s.st.RecordEvent(r.Context(), &models.Event{
 		CampaignTargetID: ct.ID, Type: models.EventSubmit,
 		IP: clientIP(r), UserAgent: r.UserAgent(), Meta: meta,
 	})
+	s.notifyEvent(c.ID, "submit", t.Email)
 
+	// Explicit landing redirect wins; otherwise auto-assign a training module and
+	// redirect there so the awareness loop closes.
 	if lp != nil && lp.RedirectURL != "" {
 		http.Redirect(w, r, lp.RedirectURL, http.StatusFound)
+		return
+	}
+	if trainingURL := s.autoAssignTraining(r.Context(), c.ID, t.ID); trainingURL != "" {
+		http.Redirect(w, r, trainingURL, http.StatusFound)
 		return
 	}
 	writeAwareness(w)
@@ -144,11 +176,12 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 	rid := chi.URLParam(r, "rid")
-	if ct, _, _, ok := s.resolve(r.Context(), rid); ok {
+	if ct, c, t, ok := s.resolve(r.Context(), rid); ok {
 		_ = s.st.RecordEvent(r.Context(), &models.Event{
 			CampaignTargetID: ct.ID, Type: models.EventReport,
 			IP: clientIP(r), UserAgent: r.UserAgent(),
 		})
+		s.notifyEvent(c.ID, "report", t.Email)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(`<!doctype html><meta charset="utf-8"><title>Thank you</title>

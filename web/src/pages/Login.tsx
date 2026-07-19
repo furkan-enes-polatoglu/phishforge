@@ -23,14 +23,13 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={submit} className="card w-full max-w-sm space-y-4">
+      <form onSubmit={submit} className="card w-full max-w-sm space-y-5">
         <div className="text-center">
-          <div className="text-2xl font-semibold">🎣 PhishForge</div>
-          <p className="mt-1 text-xs text-slate-400">
-            Authorized phishing-simulation &amp; awareness platform
-          </p>
+          <div className="mb-2 text-5xl leading-none">🎣</div>
+          <div className="text-xl font-bold">PhishForge</div>
+          <p className="mt-1 text-xs muted">Authorized phishing-simulation &amp; awareness platform</p>
         </div>
-        {err && <div className="rounded bg-red-900/50 px-3 py-2 text-sm text-red-200">{err}</div>}
+        {err && <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#fee2e2", color: "#991b1b" }}>{err}</div>}
         <div>
           <label className="label">Email</label>
           <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
@@ -39,9 +38,7 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
           <label className="label">Password</label>
           <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
         </div>
-        <button className="btn w-full justify-center" disabled={busy}>
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
+        <button className="btn w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
       </form>
     </div>
   );

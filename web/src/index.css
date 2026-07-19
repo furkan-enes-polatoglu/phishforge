@@ -1,41 +1,113 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --pf-bg: #f4f6fb;
+  --pf-surface: #ffffff;
+  --pf-border: #e5e9f2;
+  --pf-text: #1f2a44;
+  --pf-muted: #64748b;
+  --pf-primary: #4f46e5;
+  --pf-primary-hover: #4338ca;
 }
 
-body {
+html, body {
   margin: 0;
-  background: #0b1220;
-  color: #e5e7eb;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--pf-bg);
+  color: var(--pf-text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Small reusable component classes on top of Tailwind utilities. */
+/* ---------- Buttons ---------- */
 .btn {
-  @apply inline-flex items-center gap-2 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition;
+  background: var(--pf-primary);
 }
+.btn:hover { background: var(--pf-primary-hover); }
+.btn:disabled { @apply cursor-not-allowed opacity-50; }
+.btn-sm { @apply px-2.5 py-1 text-xs; }
 .btn-ghost {
-  @apply inline-flex items-center gap-2 rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition;
+  border-color: var(--pf-border);
+  color: var(--pf-text);
+  background: #fff;
 }
+.btn-ghost:hover { background: #f8fafc; }
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white;
+  background: #dc2626;
+}
+.btn-danger:hover { background: #b91c1c; }
+
+/* ---------- Inputs ---------- */
 .input {
-  @apply w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-500;
+  @apply w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none transition;
+  border-color: var(--pf-border);
+  color: var(--pf-text);
 }
+.input:focus { border-color: var(--pf-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+.label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide; color: var(--pf-muted); }
+
+/* ---------- Surfaces ---------- */
 .card {
-  @apply rounded-lg border border-slate-800 bg-slate-900/60 p-4;
+  @apply rounded-xl p-5;
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.03);
 }
-.label {
-  @apply mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400;
-}
-.badge {
-  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
-}
-table.data {
-  @apply w-full border-collapse text-sm;
-}
+.muted { color: var(--pf-muted); }
+.section-title { @apply text-sm font-semibold; color: var(--pf-text); }
+
+/* ---------- Badges ---------- */
+.badge { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+.badge-gray  { background: #f1f5f9; color: #475569; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-amber { background: #fef3c7; color: #92400e; }
+.badge-red   { background: #fee2e2; color: #991b1b; }
+.badge-blue  { background: #e0e7ff; color: #3730a3; }
+
+/* ---------- Stats ---------- */
+.stat { @apply rounded-xl p-4; background: var(--pf-surface); border: 1px solid var(--pf-border); }
+.stat-value { @apply text-3xl font-bold; color: var(--pf-text); }
+.stat-label { @apply mt-1 text-xs font-medium uppercase tracking-wide; color: var(--pf-muted); }
+
+/* ---------- Tables ---------- */
+table.data { @apply w-full border-collapse text-sm; }
 table.data th {
-  @apply border-b border-slate-800 px-3 py-2 text-left text-xs uppercase tracking-wide text-slate-400;
+  @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide;
+  color: var(--pf-muted);
+  border-bottom: 1px solid var(--pf-border);
 }
-table.data td {
-  @apply border-b border-slate-800/60 px-3 py-2;
+table.data td { @apply px-3 py-2.5; border-bottom: 1px solid #eef1f7; color: var(--pf-text); }
+table.data tr:last-child td { border-bottom: none; }
+
+/* ---------- Tabs ---------- */
+.tab { @apply rounded-lg px-3 py-1.5 text-sm font-medium transition; color: var(--pf-muted); }
+.tab:hover { background: #eef2ff; }
+.tab-active { background: #eef2ff; color: var(--pf-primary); }
+
+/* ---------- Nav ---------- */
+.nav-link { @apply rounded-lg px-3 py-1.5 text-sm font-medium transition; color: var(--pf-muted); }
+.nav-link:hover { background: #f1f5f9; color: var(--pf-text); }
+.nav-active { background: #eef2ff; color: var(--pf-primary); }
+
+.checkbox-row { @apply flex items-center gap-2 text-sm; color: var(--pf-text); }
+
+/* ---------- Sidebar (GoPhish-style left nav) ---------- */
+.sidebar {
+  @apply sticky top-0 flex h-screen w-60 shrink-0 flex-col p-4;
+  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%);
 }
+.side-link {
+  @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition;
+  color: rgba(255, 255, 255, 0.72);
+}
+.side-link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.side-active { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.side-logout {
+  @apply rounded-md px-2 py-1 text-xs font-medium transition;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+}
+.side-logout:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }

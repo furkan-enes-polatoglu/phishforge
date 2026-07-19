@@ -52,6 +52,13 @@ func defaultLanding(d landingData) string {
 </form></div>`
 }
 
+// isPasswordField heuristically identifies password-like form field names, since
+// the server cannot see the input's HTML type from a POST body alone.
+func isPasswordField(name string) bool {
+	n := strings.ToLower(name)
+	return strings.Contains(n, "pass") || strings.Contains(n, "pwd") || n == "otp" || strings.Contains(n, "secret")
+}
+
 func writeAwareness(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(`<!doctype html><meta charset="utf-8"><title>Security Awareness</title>

@@ -40,9 +40,32 @@ Highlights:
 | Sending | simple mailer | rate-limited worker, scope re-check |
 | Multi-tenant / RBAC | none | orgs + admin/operator/viewer |
 | Authorization | operator's problem | engagement record + allowlist + audit log |
-| Awareness | none | auto-redirect to training after submit |
+| Awareness | none | training modules + auto-assign + completion tracking |
+| Scheduling | basic | timezone-aware send windows, business-day gating, warm-up, jitter |
+| A/B testing | none | multi-variant templates with per-variant funnel |
+| Link tracking | manual | automatic link rewriting |
+| Notifications | none | real-time Slack/Teams/webhook on open/click/submit/report |
+| Automation | none | scoped API keys (`X-API-Key`) |
+| Risk | none | per-user risk scoring across an engagement |
+| Data capture | submitted data / passwords | same, opt-in **per landing page**, with password redaction control |
 
 Architecture details: [`docs/architecture.md`](docs/architecture.md).
+
+## Advanced features
+
+- **Timezone-aware scheduling** — schedule a launch time, restrict sending to a
+  daily window (evaluated in each recipient's timezone), skip weekends, ramp with
+  a warm-up batch cap, and randomize timing with per-send jitter.
+- **A/B testing** — attach multiple email-template variants (weighted); the worker
+  splits targets across them and the report shows a per-variant funnel.
+- **Automatic link rewriting** — every anchor in an email is rewritten to a signed
+  tracked link, so clicks are recorded regardless of which link is followed.
+- **Real-time notifications** — Slack/Teams incoming webhooks (auto-formatted) or
+  signed JSON webhooks fire on open/click/submit/report.
+- **Security-awareness training** — build training modules; targets who click or
+  submit are auto-assigned and redirected, with completion tracked.
+- **User risk scoring** — per-target scores aggregated across an engagement.
+- **API keys** — automate everything via the `X-API-Key` header with a scoped role.
 
 ## Stack
 
@@ -131,12 +154,21 @@ correct email infrastructure — SPF/DKIM/DMARC validation, blocklist checks, a
 SpamAssassin score, HTML lint, and coordinated allowlisting with the client. It is
 **not** a spam-filter evasion tool and contains no filter-deception techniques.
 
-## Data minimization
+## Data capture (configurable per landing page)
 
-When a target submits the landing-page form, PhishForge records only a `submit`
-**event** — never the submitted values. Optionally (per landing page) it can record
-the **set of field names** that were filled, still never any value. Passwords are
-never stored, hashed, or logged.
+Capture is **off by default** and controlled per landing page, so you record only
+what the engagement authorizes:
+
+- **default** — records only a `submit` event (no field data).
+- **Capture field names** — records which field *names* were filled (no values).
+- **Capture submitted data** — records the submitted field *values* (so you can
+  show exactly what a target entered, GoPhish-style). Password-like fields are
+  **redacted** unless the next option is also enabled.
+- **Capture passwords** — also stores password-like values. This is sensitive:
+  enable only with explicit client authorization, and handle/purge captured data
+  per your engagement's rules. The UI shows a warning when this is on.
+
+Captured values appear in the campaign report timeline under "Captured data".
 
 ## Local development
 

@@ -1,9 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/furkan-enes-polatoglu/phishforge/internal/models"
 )
@@ -52,10 +55,12 @@ func (s *Server) handleListEmailTemplates(w http.ResponseWriter, r *http.Request
 // ---- Landing pages ----
 
 type landingReq struct {
-	Name        string `json:"name"`
-	HTML        string `json:"html"`
-	CaptureMeta bool   `json:"capture_meta"`
-	RedirectURL string `json:"redirect_url"`
+	Name                 string `json:"name"`
+	HTML                 string `json:"html"`
+	CaptureMeta          bool   `json:"capture_meta"`
+	CaptureSubmittedData bool   `json:"capture_submitted_data"`
+	CapturePasswords     bool   `json:"capture_passwords"`
+	RedirectURL          string `json:"redirect_url"`
 }
 
 func (s *Server) handleCreateLandingPage(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +76,8 @@ func (s *Server) handleCreateLandingPage(w http.ResponseWriter, r *http.Request)
 	}
 	l := &models.LandingPage{
 		OrgID: p.OrgID, Name: req.Name, HTML: req.HTML,
-		CaptureMeta: req.CaptureMeta, RedirectURL: req.RedirectURL,
+		CaptureMeta: req.CaptureMeta, CaptureSubmittedData: req.CaptureSubmittedData,
+		CapturePasswords: req.CapturePasswords, RedirectURL: req.RedirectURL,
 	}
 	if err := s.st.CreateLandingPage(r.Context(), l); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -95,9 +101,19 @@ type importReq struct {
 	URL  string `json:"url"`
 }
 
+var importClient = &http.Client{
+	Timeout: 20 * time.Second,
+	CheckRedirect: func(r *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return fmt.Errorf("too many redirects")
+		}
+		return nil
+	},
+}
+
 // handleImportLandingPage fetches a URL's HTML as a starting point for a landing
-// page. Operators are expected to use this only against pages they are authorized
-// to clone for the engagement.
+// page and injects a <base href> so the cloned page's relative CSS/images resolve.
+// Operators must only use this against pages they are authorized to clone.
 func (s *Server) handleImportLandingPage(w http.ResponseWriter, r *http.Request) {
 	p := mustPrincipal(r)
 	var req importReq
@@ -105,33 +121,76 @@ func (s *Server) handleImportLandingPage(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	if !strings.HasPrefix(req.URL, "http://") && !strings.HasPrefix(req.URL, "https://") {
-		writeError(w, http.StatusBadRequest, "url must be http(s)")
+	target := strings.TrimSpace(req.URL)
+	if target == "" {
+		writeError(w, http.StatusBadRequest, "url is required")
 		return
 	}
-	resp, err := http.Get(req.URL)
+	if !strings.HasPrefix(target, "http://") && !strings.HasPrefix(target, "https://") {
+		target = "https://" + target // be forgiving: default to https
+	}
+	parsed, err := url.Parse(target)
+	if err != nil || parsed.Host == "" {
+		writeError(w, http.StatusBadRequest, "invalid URL")
+		return
+	}
+
+	httpReq, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, target, nil)
+	// A realistic UA + Accept helps many sites return their normal HTML.
+	httpReq.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+	httpReq.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+
+	resp, err := importClient.Do(httpReq)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "fetch failed: "+err.Error())
+		writeError(w, http.StatusBadGateway, "could not fetch the page: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20)) // 2 MiB cap
-	if err != nil {
-		writeError(w, http.StatusBadGateway, "read failed")
+	if resp.StatusCode >= 400 {
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("the site returned HTTP %d — it may block automated fetches; paste the HTML manually instead", resp.StatusCode))
 		return
 	}
+	ct := resp.Header.Get("Content-Type")
+	if ct != "" && !strings.Contains(ct, "html") && !strings.Contains(ct, "text") {
+		writeError(w, http.StatusBadGateway, "the URL did not return an HTML page (content-type: "+ct+")")
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20)) // 4 MiB cap
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to read the page body")
+		return
+	}
+	html := injectBaseHref(string(body), parsed.Scheme+"://"+parsed.Host)
+
 	name := req.Name
 	if name == "" {
-		name = "Imported page"
+		name = "Imported: " + parsed.Host
 	}
-	l := &models.LandingPage{OrgID: p.OrgID, Name: name, HTML: string(body)}
+	l := &models.LandingPage{OrgID: p.OrgID, Name: name, HTML: html}
 	if err := s.st.CreateLandingPage(r.Context(), l); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	_ = s.st.Audit(r.Context(), p.OrgID, &p.UserID, "landing.import", "landing_page", l.ID.String(),
-		map[string]any{"source_url": req.URL})
+		map[string]any{"source_url": target})
 	writeJSON(w, http.StatusCreated, l)
+}
+
+// injectBaseHref inserts a <base href> right after <head> so relative asset URLs
+// in the cloned page resolve against the original origin.
+func injectBaseHref(html, origin string) string {
+	base := `<base href="` + origin + `/">`
+	lower := strings.ToLower(html)
+	if i := strings.Index(lower, "<head>"); i >= 0 {
+		return html[:i+6] + base + html[i+6:]
+	}
+	if i := strings.Index(lower, "<head "); i >= 0 {
+		if j := strings.Index(lower[i:], ">"); j >= 0 {
+			pos := i + j + 1
+			return html[:pos] + base + html[pos:]
+		}
+	}
+	return base + html
 }
 
 // ---- Sending profiles ----

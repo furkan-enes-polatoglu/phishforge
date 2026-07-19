@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { FunnelBars } from "../components/Funnel";
 
 interface Stats {
   engagements_total: number;
   engagements_active: number;
   role: string;
+  funnel: Record<string, number>;
 }
 
 export default function Dashboard() {
@@ -17,19 +19,26 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
-      {err && <div className="text-red-300">{err}</div>}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      {err && <div className="text-sm" style={{ color: "#b91c1c" }}>{err}</div>}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Engagements" value={s?.engagements_total ?? "—"} />
         <Stat label="Active" value={s?.engagements_active ?? "—"} />
+        <Stat label="Targets contacted" value={s?.funnel?.targets ?? "—"} />
         <Stat label="Your role" value={s?.role ?? "—"} />
       </div>
-      <div className="card text-sm text-slate-300">
-        <p className="font-medium text-slate-100">Authorized use only</p>
-        <p className="mt-1 text-slate-400">
+
+      <div className="card">
+        <div className="section-title mb-3">Organization funnel (all campaigns)</div>
+        {s?.funnel ? <FunnelBars funnel={s.funnel} /> : <div className="muted text-sm">Loading…</div>}
+      </div>
+
+      <div className="card text-sm">
+        <p className="font-semibold">Authorized use only</p>
+        <p className="mt-1 muted">
           Every campaign runs inside an <b>engagement</b> that records the client, a written
-          authorization reference, and a date window. Targets outside the engagement
-          allowlist are rejected, and all actions are written to an append-only audit log.
+          authorization reference, and a date window. Targets outside the engagement allowlist are
+          rejected, and all actions are written to an append-only audit log.
         </p>
       </div>
     </div>
@@ -38,9 +47,9 @@ export default function Dashboard() {
 
 function Stat({ label, value }: { label: string; value: any }) {
   return (
-    <div className="card">
-      <div className="text-3xl font-semibold">{value}</div>
-      <div className="mt-1 text-xs uppercase tracking-wide text-slate-400">{label}</div>
+    <div className="stat">
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
     </div>
   );
 }

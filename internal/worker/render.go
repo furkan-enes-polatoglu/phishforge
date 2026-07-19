@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/furkan-enes-polatoglu/phishforge/internal/models"
@@ -34,15 +35,23 @@ func Render(body string, data TemplateData) (string, error) {
 	return buf.String(), nil
 }
 
-// InjectTracking appends an open-tracking pixel and ensures a click link exists.
-// If the template contains {{.TrackURL}} the operator placed the link; otherwise
-// we do not rewrite arbitrary anchors (kept explicit for auditability).
+// InjectTracking appends an open-tracking pixel before </body> (or at the end).
 func InjectTracking(html string, data TemplateData) string {
 	pixel := `<img src="` + template.HTMLEscapeString(data.TrackPixel) + `" width="1" height="1" alt="" style="display:none">`
 	if strings.Contains(strings.ToLower(html), "</body>") {
 		return strings.Replace(html, "</body>", pixel+"</body>", 1)
 	}
 	return html + pixel
+}
+
+var reAnchorHref = regexp.MustCompile(`(?i)(<a\b[^>]*\shref=)("|')(.*?)("|')`)
+
+// RewriteLinks replaces the href of every anchor with the tracked click URL so
+// clicks are recorded regardless of which link the target follows. The original
+// href is dropped (the tracked URL leads to the simulation landing page).
+func RewriteLinks(html, trackURL string) string {
+	repl := `${1}"` + template.HTMLEscapeString(trackURL) + `"`
+	return reAnchorHref.ReplaceAllString(html, repl)
 }
 
 func buildData(t models.Target, phishBase, rid string) TemplateData {
