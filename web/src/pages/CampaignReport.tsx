@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { FunnelBars } from "../components/Funnel";
+import { useI18n } from "../i18n";
 
 export default function CampaignReport() {
+  const { t } = useI18n();
   const { id } = useParams();
   const [report, setReport] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
@@ -39,21 +41,21 @@ export default function CampaignReport() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link to={`/engagements/${report.campaign.engagement_id}`} className="muted hover:underline">← Engagement</Link>
+        <Link to={`/engagements/${report.campaign.engagement_id}`} className="muted hover:underline">← {t("nav_engagements")}</Link>
         <h1 className="text-2xl font-bold">{report.campaign.name}</h1>
       </div>
 
       <div className="card">
-        <div className="section-title mb-3">Funnel</div>
+        <div className="section-title mb-3">{t("funnel")}</div>
         <FunnelBars funnel={report.funnel} />
       </div>
 
       {/* A/B variants */}
       <div className="card space-y-3">
-        <div className="section-title">A/B variants</div>
+        <div className="section-title">{t("ab_variants")}</div>
         {report.variants?.length > 0 && (
           <table className="data">
-            <thead><tr><th>Variant</th><th>Targets</th><th>Opened</th><th>Clicked</th><th>Submitted</th><th>Click %</th></tr></thead>
+            <thead><tr><th>{t("variant")}</th><th>{t("targets")}</th><th>{t("opens")}</th><th>{t("clicks")}</th><th>{t("submits")}</th><th>%</th></tr></thead>
             <tbody>
               {report.variants.map((v: any, i: number) => (
                 <tr key={i}>
@@ -66,24 +68,23 @@ export default function CampaignReport() {
           </table>
         )}
         <form onSubmit={addVariant} className="flex flex-wrap items-end gap-2">
-          <div><label className="label">Variant name</label><input className="input" value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} required /></div>
-          <div><label className="label">Template</label>
+          <div><label className="label">{t("variant")}</label><input className="input" value={nv.name} onChange={(e) => setNv({ ...nv, name: e.target.value })} required /></div>
+          <div><label className="label">{t("email_template")}</label>
             <select className="input" value={nv.email_template_id} onChange={(e) => setNv({ ...nv, email_template_id: e.target.value })} required>
-              <option value="">— select —</option>
-              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <option value="">{t("select")}</option>
+              {templates.map((tp) => <option key={tp.id} value={tp.id}>{tp.name}</option>)}
             </select>
           </div>
-          <div><label className="label">Weight</label><input className="input w-20" type="number" min={1} value={nv.weight} onChange={(e) => setNv({ ...nv, weight: +e.target.value })} /></div>
-          <button className="btn">Add variant</button>
+          <div><label className="label">{t("weight")}</label><input className="input w-20" type="number" min={1} value={nv.weight} onChange={(e) => setNv({ ...nv, weight: +e.target.value })} /></div>
+          <button className="btn">{t("add_variant")}</button>
         </form>
-        <p className="text-xs muted">Add variants before launching; targets are split across variants (assign on campaign creation for existing ones).</p>
       </div>
 
       <div className="card">
-        <div className="section-title mb-2">Timeline</div>
+        <div className="section-title mb-2">{t("timeline")}</div>
         <div className="overflow-x-auto">
           <table className="data">
-            <thead><tr><th>When</th><th>Target</th><th>Event</th><th>IP</th><th>Captured data</th></tr></thead>
+            <thead><tr><th>{t("when")}</th><th>{t("target")}</th><th>{t("event")}</th><th>IP</th><th>{t("captured_data")}</th></tr></thead>
             <tbody>
               {timeline.map((ev, i) => (
                 <tr key={i}>

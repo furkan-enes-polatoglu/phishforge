@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { api } from "../api";
+import { useI18n } from "../i18n";
 
 export default function Deliverability() {
+  const { t } = useI18n();
   const [f, setF] = useState({ domain: "", dkim_selector: "", sender_ip: "", html: "" });
   const [res, setRes] = useState<any>(null);
   const [err, setErr] = useState("");
@@ -26,19 +28,15 @@ export default function Deliverability() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Deliverability</h1>
-      <p className="text-sm muted">
-        Legitimate pre-send email health checks — verify SPF/DKIM/DMARC, blocklists and markup so
-        authorized test mail reaches the inbox. This is <b>not</b> a spam-filter evasion tool;
-        coordinate an allowlist with the client's mail gateway.
-      </p>
+      <h1 className="text-2xl font-bold">{t("deliverability")}</h1>
+      <p className="text-sm muted">{t("deliverability_help")}</p>
 
       <form onSubmit={run} className="card grid gap-3 sm:grid-cols-2">
-        <input className="input" placeholder="Sender domain (e.g. mail.acme.com)" value={f.domain} onChange={(e) => setF({ ...f, domain: e.target.value })} required />
-        <input className="input" placeholder="DKIM selector (optional)" value={f.dkim_selector} onChange={(e) => setF({ ...f, dkim_selector: e.target.value })} />
-        <input className="input" placeholder="Sender IPv4 for RBL (optional)" value={f.sender_ip} onChange={(e) => setF({ ...f, sender_ip: e.target.value })} />
-        <textarea className="input h-24 font-mono text-xs sm:col-span-2" placeholder="Paste email HTML for lint (optional)" value={f.html} onChange={(e) => setF({ ...f, html: e.target.value })} />
-        <div><button className="btn" disabled={busy}>{busy ? "Checking…" : "Run check"}</button></div>
+        <input className="input" placeholder={t("dkim_domain") + " (örn. mail.acme.com)"} value={f.domain} onChange={(e) => setF({ ...f, domain: e.target.value })} required />
+        <input className="input" placeholder={t("dkim_selector")} value={f.dkim_selector} onChange={(e) => setF({ ...f, dkim_selector: e.target.value })} />
+        <input className="input" placeholder="RBL için gönderen IPv4 (opsiyonel)" value={f.sender_ip} onChange={(e) => setF({ ...f, sender_ip: e.target.value })} />
+        <textarea className="input h-24 font-mono text-xs sm:col-span-2" placeholder="Lint için e-posta HTML'i (opsiyonel)" value={f.html} onChange={(e) => setF({ ...f, html: e.target.value })} />
+        <div><button className="btn" disabled={busy}>{busy ? t("checking") : t("run_check")}</button></div>
       </form>
 
       {err && <div style={{ color: "#b91c1c" }}>{err}</div>}
@@ -46,7 +44,7 @@ export default function Deliverability() {
       {res && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="card">
-            <div className="section-title mb-2">Authentication — {res.domain}</div>
+            <div className="section-title mb-2">{t("authentication")} — {res.domain}</div>
             {rec("SPF", res.spf)}
             {rec("DMARC", res.dmarc)}
             {rec("DKIM", res.dkim)}
@@ -55,7 +53,7 @@ export default function Deliverability() {
             )}
             {res.rbl?.length > 0 && (
               <div className="mt-3">
-                <div className="label">Blocklists</div>
+                <div className="label">{t("blocklists")}</div>
                 {res.rbl.map((b: any) => (
                   <div key={b.list} className="flex justify-between py-1 text-sm">
                     <span>{b.list}</span>
@@ -67,7 +65,7 @@ export default function Deliverability() {
           </div>
           <div className="card space-y-3">
             <div>
-              <div className="label">Advice</div>
+              <div className="label">{t("advice")}</div>
               <ul className="list-disc space-y-1 pl-5 text-sm">{res.advice?.map((a: string, i: number) => <li key={i}>{a}</li>)}</ul>
             </div>
             {res.html_lint?.length > 0 && (

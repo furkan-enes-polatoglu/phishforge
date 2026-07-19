@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api, clearTokens, getAccess } from "./api";
+import { useI18n } from "./i18n";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Engagements from "./pages/Engagements";
@@ -19,14 +20,15 @@ interface Me {
 
 function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
   const loc = useLocation();
+  const { t } = useI18n();
   const nav = [
-    { to: "/", label: "Dashboard", icon: "📊" },
-    { to: "/engagements", label: "Engagements", icon: "🎯" },
-    { to: "/assets", label: "Assets", icon: "✉️" },
-    { to: "/training", label: "Training", icon: "🎓" },
-    { to: "/deliverability", label: "Deliverability", icon: "📬" },
-    { to: "/settings", label: "Settings", icon: "⚙️" },
-    { to: "/audit", label: "Audit", icon: "📝" },
+    { to: "/", label: t("nav_dashboard"), icon: "📊" },
+    { to: "/engagements", label: t("nav_engagements"), icon: "🎯" },
+    { to: "/assets", label: t("nav_assets"), icon: "✉️" },
+    { to: "/training", label: t("nav_training"), icon: "🎓" },
+    { to: "/deliverability", label: t("nav_deliverability"), icon: "📬" },
+    { to: "/settings", label: t("nav_settings"), icon: "⚙️" },
+    { to: "/audit", label: t("nav_audit"), icon: "📝" },
   ];
   const active = (to: string) =>
     loc.pathname === to || (to !== "/" && loc.pathname.startsWith(to));
@@ -48,7 +50,7 @@ function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
           <div className="px-2 text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>{me.email}</div>
           <div className="mt-1 flex items-center justify-between px-2">
             <span className="badge badge-blue">{me.role}</span>
-            <button className="side-logout" onClick={onLogout}>Log out</button>
+            <button className="side-logout" onClick={onLogout}>{t("logout")}</button>
           </div>
         </div>
       </aside>

@@ -118,6 +118,34 @@ func (s *Store) ListTrainingModules(ctx context.Context, orgID uuid.UUID) ([]mod
 	return out, rows.Err()
 }
 
+func (s *Store) GetTrainingModule(ctx context.Context, orgID, id uuid.UUID) (*models.TrainingModule, error) {
+	var m models.TrainingModule
+	err := s.pool.QueryRow(ctx,
+		`SELECT id,org_id,name,html,created_at FROM training_modules WHERE org_id=$1 AND id=$2`, orgID, id,
+	).Scan(&m.ID, &m.OrgID, &m.Name, &m.HTML, &m.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return &m, err
+}
+
+func (s *Store) UpdateTrainingModule(ctx context.Context, orgID uuid.UUID, m *models.TrainingModule) error {
+	ct, err := s.pool.Exec(ctx,
+		`UPDATE training_modules SET name=$1,html=$2 WHERE org_id=$3 AND id=$4`, m.Name, m.HTML, orgID, m.ID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) DeleteTrainingModule(ctx context.Context, orgID, id uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM training_modules WHERE org_id=$1 AND id=$2`, orgID, id)
+	return err
+}
+
 // AssignTraining creates (idempotently) a training assignment for a target and
 // returns the assignment token used in the completion link.
 func (s *Store) AssignTraining(ctx context.Context, targetID, moduleID uuid.UUID, campaignID *uuid.UUID, token string) (string, error) {

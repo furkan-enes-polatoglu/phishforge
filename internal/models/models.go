@@ -81,17 +81,22 @@ type ScopeRule struct {
 }
 
 type SendingProfile struct {
-	ID           uuid.UUID `json:"id"`
-	OrgID        uuid.UUID `json:"org_id"`
-	Name         string    `json:"name"`
-	SMTPHost     string    `json:"smtp_host"`
-	SMTPPort     int       `json:"smtp_port"`
-	Username     string    `json:"username"`
-	Password     string    `json:"-"` // never serialized
-	FromAddress  string    `json:"from_address"`
-	FromName     string    `json:"from_name"`
-	UseTLS       bool      `json:"use_tls"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID          uuid.UUID `json:"id"`
+	OrgID       uuid.UUID `json:"org_id"`
+	Name        string    `json:"name"`
+	SMTPHost    string    `json:"smtp_host"`
+	SMTPPort    int       `json:"smtp_port"`
+	Username    string    `json:"username"`
+	Password    string    `json:"-"` // never serialized
+	FromAddress string    `json:"from_address"`
+	FromName    string    `json:"from_name"`
+	UseTLS      bool      `json:"use_tls"`
+	// DKIM signing (legitimate deliverability)
+	DKIMDomain     string `json:"dkim_domain"`
+	DKIMSelector   string `json:"dkim_selector"`
+	DKIMPrivateKey string `json:"-"` // never serialized
+	SignDKIM       bool   `json:"sign_dkim"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Target struct {

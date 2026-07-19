@@ -216,7 +216,7 @@ func (w *Worker) processLaunch(ctx context.Context, job queue.LaunchJob) error {
 
 		msg := Message{
 			From: profile.FromAddress, FromName: profile.FromName, To: t.Email,
-			Subject: subject, HTML: htmlBody, Text: textBody,
+			Subject: subject, HTML: htmlBody, Text: textBody, Unsubscribe: data.ReportURL,
 		}
 		if err := Send(profile, msg); err != nil {
 			_ = w.st.SetCampaignTargetStatus(ctx, ct.ID, "error", err.Error())

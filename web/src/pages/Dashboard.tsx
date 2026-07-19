@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { FunnelBars } from "../components/Funnel";
+import { useI18n } from "../i18n";
 
 interface Stats {
   engagements_total: number;
@@ -10,6 +11,7 @@ interface Stats {
 }
 
 export default function Dashboard() {
+  const { t } = useI18n();
   const [s, setS] = useState<Stats | null>(null);
   const [err, setErr] = useState("");
 
@@ -19,27 +21,23 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">{t("dashboard")}</h1>
       {err && <div className="text-sm" style={{ color: "#b91c1c" }}>{err}</div>}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Engagements" value={s?.engagements_total ?? "—"} />
-        <Stat label="Active" value={s?.engagements_active ?? "—"} />
-        <Stat label="Targets contacted" value={s?.funnel?.targets ?? "—"} />
-        <Stat label="Your role" value={s?.role ?? "—"} />
+        <Stat label={t("stat_engagements")} value={s?.engagements_total ?? "—"} />
+        <Stat label={t("stat_active")} value={s?.engagements_active ?? "—"} />
+        <Stat label={t("stat_targets")} value={s?.funnel?.targets ?? "—"} />
+        <Stat label={t("stat_role")} value={s?.role ?? "—"} />
       </div>
 
       <div className="card">
-        <div className="section-title mb-3">Organization funnel (all campaigns)</div>
-        {s?.funnel ? <FunnelBars funnel={s.funnel} /> : <div className="muted text-sm">Loading…</div>}
+        <div className="section-title mb-3">{t("org_funnel")}</div>
+        {s?.funnel ? <FunnelBars funnel={s.funnel} /> : <div className="muted text-sm">{t("loading")}</div>}
       </div>
 
       <div className="card text-sm">
-        <p className="font-semibold">Authorized use only</p>
-        <p className="mt-1 muted">
-          Every campaign runs inside an <b>engagement</b> that records the client, a written
-          authorization reference, and a date window. Targets outside the engagement allowlist are
-          rejected, and all actions are written to an append-only audit log.
-        </p>
+        <p className="font-semibold">{t("authorized_only")}</p>
+        <p className="mt-1 muted">{t("authorized_only_body")}</p>
       </div>
     </div>
   );

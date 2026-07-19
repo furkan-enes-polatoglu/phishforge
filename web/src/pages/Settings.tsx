@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useI18n } from "../i18n";
 
 const EVENTS = ["open", "click", "submit", "report"];
 
 export default function Settings() {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">{t("settings")}</h1>
       <Webhooks />
       <APIKeys />
     </div>
@@ -14,6 +16,7 @@ export default function Settings() {
 }
 
 function Webhooks() {
+  const { t } = useI18n();
   const [list, setList] = useState<any[]>([]);
   const [f, setF] = useState<any>({ url: "", secret: "", events: [] as string[] });
   const [msg, setMsg] = useState("");
@@ -30,22 +33,22 @@ function Webhooks() {
   async function del(id: string) { await api(`webhooks/${id}`, { method: "DELETE" }); load(); }
   return (
     <div className="card space-y-3">
-      <div className="section-title">Notifications (webhooks &amp; Slack/Teams)</div>
-      <p className="text-xs muted">Real-time alerts on target actions. Slack/Teams incoming-webhook URLs are auto-formatted; other URLs get a signed JSON payload (HMAC in X-PhishForge-Signature).</p>
+      <div className="section-title">{t("notifications")}</div>
+      <p className="text-xs muted">{t("notif_help")}</p>
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
-        <input className="input" placeholder="Webhook URL" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} required />
-        <input className="input" placeholder="Signing secret (optional)" value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} />
+        <input className="input" placeholder={t("webhook_url")} value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} required />
+        <input className="input" placeholder={t("signing_secret")} value={f.secret} onChange={(e) => setF({ ...f, secret: e.target.value })} />
         <div className="sm:col-span-2 flex flex-wrap gap-3">
           {EVENTS.map((ev) => (
             <label key={ev} className="checkbox-row"><input type="checkbox" checked={f.events.includes(ev)} onChange={() => toggle(ev)} /> {ev}</label>
           ))}
-          <span className="text-xs muted">(none selected = all events)</span>
+          <span className="text-xs muted">{t("none_all_events")}</span>
         </div>
-        <div><button className="btn">Add webhook</button></div>
+        <div><button className="btn">{t("add_webhook")}</button></div>
       </form>
       {msg && <div className="text-sm" style={{ color: "#b91c1c" }}>{msg}</div>}
       <table className="data">
-        <thead><tr><th>URL</th><th>Events</th><th></th></tr></thead>
+        <thead><tr><th>URL</th><th>{t("events")}</th><th></th></tr></thead>
         <tbody>
           {list.map((w) => (
             <tr key={w.id}>
@@ -54,7 +57,7 @@ function Webhooks() {
               <td><button className="btn-danger btn-sm" onClick={() => del(w.id)}>Delete</button></td>
             </tr>
           ))}
-          {list.length === 0 && <tr><td colSpan={3} className="text-center muted">No webhooks.</td></tr>}
+          {list.length === 0 && <tr><td colSpan={3} className="text-center muted">{t("none_yet")}</td></tr>}
         </tbody>
       </table>
     </div>
@@ -62,6 +65,7 @@ function Webhooks() {
 }
 
 function APIKeys() {
+  const { t } = useI18n();
   const [list, setList] = useState<any[]>([]);
   const [f, setF] = useState({ name: "", role: "operator" });
   const [created, setCreated] = useState("");
@@ -76,36 +80,36 @@ function APIKeys() {
   async function revoke(id: string) { await api(`api-keys/${id}`, { method: "DELETE" }); load(); }
   return (
     <div className="card space-y-3">
-      <div className="section-title">API keys (automation)</div>
-      <p className="text-xs muted">Use in the <code>X-API-Key</code> header. The full key is shown once at creation.</p>
+      <div className="section-title">{t("api_keys")}</div>
+      <p className="text-xs muted">{t("api_help")}</p>
       {created && (
         <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#dcfce7", color: "#166534" }}>
-          New key (copy now, shown once): <span className="font-mono font-semibold">{created}</span>
+          {t("api_created_once")} <span className="font-mono font-semibold">{created}</span>
         </div>
       )}
       <form onSubmit={create} className="flex flex-wrap items-end gap-2">
-        <div><label className="label">Name</label><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></div>
-        <div><label className="label">Role</label>
+        <div><label className="label">{t("name")}</label><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></div>
+        <div><label className="label">{t("role")}</label>
           <select className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
             <option value="viewer">viewer</option><option value="operator">operator</option><option value="admin">admin</option>
           </select>
         </div>
-        <button className="btn">Create key</button>
+        <button className="btn">{t("create_key")}</button>
       </form>
       {msg && <div className="text-sm" style={{ color: "#b91c1c" }}>{msg}</div>}
       <table className="data">
-        <thead><tr><th>Name</th><th>Prefix</th><th>Role</th><th>Last used</th><th></th></tr></thead>
+        <thead><tr><th>{t("name")}</th><th>{t("prefix")}</th><th>{t("role")}</th><th>{t("last_used")}</th><th></th></tr></thead>
         <tbody>
           {list.map((k) => (
             <tr key={k.id}>
               <td>{k.name}</td>
               <td className="font-mono text-xs">{k.prefix}…</td>
               <td><span className="badge badge-blue">{k.role}</span></td>
-              <td className="muted">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "never"}</td>
-              <td>{k.revoked ? <span className="badge badge-gray">revoked</span> : <button className="btn-danger btn-sm" onClick={() => revoke(k.id)}>Revoke</button>}</td>
+              <td className="muted">{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : t("never")}</td>
+              <td>{k.revoked ? <span className="badge badge-gray">{t("revoked")}</span> : <button className="btn-danger btn-sm" onClick={() => revoke(k.id)}>{t("revoke")}</button>}</td>
             </tr>
           ))}
-          {list.length === 0 && <tr><td colSpan={5} className="text-center muted">No API keys.</td></tr>}
+          {list.length === 0 && <tr><td colSpan={5} className="text-center muted">{t("none_yet")}</td></tr>}
         </tbody>
       </table>
     </div>

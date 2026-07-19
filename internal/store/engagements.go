@@ -64,6 +64,24 @@ func (s *Store) SetEngagementStatus(ctx context.Context, orgID, id uuid.UUID, st
 	return nil
 }
 
+func (s *Store) UpdateEngagement(ctx context.Context, e *models.Engagement) error {
+	ct, err := s.pool.Exec(ctx,
+		`UPDATE engagements SET client_name=$1,authz_ref=$2,starts_at=$3,ends_at=$4 WHERE org_id=$5 AND id=$6`,
+		e.ClientName, e.AuthzRef, e.StartsAt, e.EndsAt, e.OrgID, e.ID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) DeleteEngagement(ctx context.Context, orgID, id uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM engagements WHERE org_id=$1 AND id=$2`, orgID, id)
+	return err
+}
+
 func (s *Store) AddScopeRule(ctx context.Context, r *models.ScopeRule) error {
 	return s.pool.QueryRow(ctx,
 		`INSERT INTO scope_rules(engagement_id, kind, pattern) VALUES($1,$2,$3)

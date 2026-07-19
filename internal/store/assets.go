@@ -13,15 +13,16 @@ import (
 
 func (s *Store) CreateSendingProfile(ctx context.Context, p *models.SendingProfile) error {
 	return s.pool.QueryRow(ctx,
-		`INSERT INTO sending_profiles(org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, created_at`,
+		`INSERT INTO sending_profiles(org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id, created_at`,
 		p.OrgID, p.Name, p.SMTPHost, p.SMTPPort, p.Username, p.Password, p.FromAddress, p.FromName, p.UseTLS,
+		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM,
 	).Scan(&p.ID, &p.CreatedAt)
 }
 
 func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]models.SendingProfile, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id,org_id,name,smtp_host,smtp_port,username,from_address,from_name,use_tls,created_at
+		`SELECT id,org_id,name,smtp_host,smtp_port,username,from_address,from_name,use_tls,dkim_domain,dkim_selector,sign_dkim,created_at
 		 FROM sending_profiles WHERE org_id=$1 ORDER BY created_at DESC`, orgID)
 	if err != nil {
 		return nil, err
@@ -30,7 +31,7 @@ func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]mod
 	out := []models.SendingProfile{}
 	for rows.Next() {
 		var p models.SendingProfile
-		if err := rows.Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.FromAddress, &p.FromName, &p.UseTLS, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.FromAddress, &p.FromName, &p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.SignDKIM, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -38,13 +39,13 @@ func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]mod
 	return out, rows.Err()
 }
 
-// GetSendingProfileFull includes the password (used by the worker only).
+// GetSendingProfileFull includes secrets (password + DKIM key); worker/internal use only.
 func (s *Store) GetSendingProfileFull(ctx context.Context, orgID, id uuid.UUID) (*models.SendingProfile, error) {
 	var p models.SendingProfile
 	err := s.pool.QueryRow(ctx,
-		`SELECT id,org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,created_at
+		`SELECT id,org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,created_at
 		 FROM sending_profiles WHERE org_id=$1 AND id=$2`, orgID, id,
-	).Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.Password, &p.FromAddress, &p.FromName, &p.UseTLS, &p.CreatedAt)
+	).Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.Password, &p.FromAddress, &p.FromName, &p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.DKIMPrivateKey, &p.SignDKIM, &p.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -52,6 +53,26 @@ func (s *Store) GetSendingProfileFull(ctx context.Context, orgID, id uuid.UUID) 
 		return nil, err
 	}
 	return &p, nil
+}
+
+func (s *Store) UpdateSendingProfile(ctx context.Context, orgID uuid.UUID, p *models.SendingProfile) error {
+	ct, err := s.pool.Exec(ctx,
+		`UPDATE sending_profiles SET name=$1,smtp_host=$2,smtp_port=$3,username=$4,password=$5,from_address=$6,from_name=$7,use_tls=$8,dkim_domain=$9,dkim_selector=$10,dkim_private_key=$11,sign_dkim=$12
+		 WHERE org_id=$13 AND id=$14`,
+		p.Name, p.SMTPHost, p.SMTPPort, p.Username, p.Password, p.FromAddress, p.FromName, p.UseTLS,
+		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, orgID, p.ID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) DeleteSendingProfile(ctx context.Context, orgID, id uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM sending_profiles WHERE org_id=$1 AND id=$2`, orgID, id)
+	return err
 }
 
 // ---- Targets ----
@@ -129,6 +150,24 @@ func (s *Store) GetEmailTemplate(ctx context.Context, orgID, id uuid.UUID) (*mod
 	return &t, nil
 }
 
+func (s *Store) UpdateEmailTemplate(ctx context.Context, orgID uuid.UUID, t *models.EmailTemplate) error {
+	ct, err := s.pool.Exec(ctx,
+		`UPDATE email_templates SET name=$1,subject=$2,html=$3,text=$4,version=version+1 WHERE org_id=$5 AND id=$6`,
+		t.Name, t.Subject, t.HTML, t.Text, orgID, t.ID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) DeleteEmailTemplate(ctx context.Context, orgID, id uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM email_templates WHERE org_id=$1 AND id=$2`, orgID, id)
+	return err
+}
+
 // ---- Landing pages ----
 
 const landingCols = `id,org_id,name,html,capture_meta,capture_submitted_data,capture_passwords,redirect_url,created_at`
@@ -175,4 +214,22 @@ func (s *Store) GetLandingPage(ctx context.Context, orgID, id uuid.UUID) (*model
 		return nil, err
 	}
 	return &l, nil
+}
+
+func (s *Store) UpdateLandingPage(ctx context.Context, orgID uuid.UUID, l *models.LandingPage) error {
+	ct, err := s.pool.Exec(ctx,
+		`UPDATE landing_pages SET name=$1,html=$2,capture_meta=$3,capture_submitted_data=$4,capture_passwords=$5,redirect_url=$6 WHERE org_id=$7 AND id=$8`,
+		l.Name, l.HTML, l.CaptureMeta, l.CaptureSubmittedData, l.CapturePasswords, l.RedirectURL, orgID, l.ID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Store) DeleteLandingPage(ctx context.Context, orgID, id uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM landing_pages WHERE org_id=$1 AND id=$2`, orgID, id)
+	return err
 }

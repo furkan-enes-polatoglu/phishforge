@@ -149,10 +149,32 @@ docker compose down -v              # stop and wipe all data
 
 ## Deliverability, done legitimately
 
-The deliverability module helps authorized test mail **reach the inbox** through
-correct email infrastructure — SPF/DKIM/DMARC validation, blocklist checks, a
-SpamAssassin score, HTML lint, and coordinated allowlisting with the client. It is
-**not** a spam-filter evasion tool and contains no filter-deception techniques.
+PhishForge maximizes inbox placement through **correct email infrastructure**, not
+filter deception. It is **not** a spam-filter evasion tool.
+
+- **DKIM signing** — generate a per-sending-profile RSA keypair in the UI; PhishForge
+  publishes the DNS TXT record for you to add and signs every outbound message
+  (RFC 6376). This is the single biggest legitimate deliverability win.
+- **Well-formed messages** — multipart/alternative with a real text part, a valid
+  `Date`, a unique `Message-ID`, and `List-Unsubscribe` headers.
+- **Deliverability checker** — validate SPF/DKIM/DMARC, blocklists (RBL), a
+  SpamAssassin score, and HTML lint before you send.
+- **Reputation-friendly sending** — warm-up batching, per-send jitter, rate limits,
+  and timezone-aware send windows.
+- **Coordinate an allowlist** with the client's mail gateway — for an authorized
+  test this is the most reliable path to the inbox.
+
+## Manage everything (CRUD)
+
+Engagements, email templates, landing pages, sending profiles, training modules,
+campaigns, webhooks and API keys can all be **created, edited, duplicated and
+deleted** from the UI, GoPhish-style.
+
+## Language
+
+The UI ships with a language selector on the login screen. **Turkish** is the
+default; English is included as a base and more languages can be added in
+`web/src/i18n.tsx`.
 
 ## Data capture (configurable per landing page)
 

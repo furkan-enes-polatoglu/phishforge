@@ -60,6 +60,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/engagements", s.handleListEngagements)
 			r.Post("/engagements", s.requireRole("operator", s.handleCreateEngagement))
 			r.Get("/engagements/{id}", s.handleGetEngagement)
+			r.Put("/engagements/{id}", s.requireRole("operator", s.handleUpdateEngagement))
+			r.Delete("/engagements/{id}", s.requireRole("operator", s.handleDeleteEngagement))
 			r.Post("/engagements/{id}/status", s.requireRole("operator", s.handleSetEngagementStatus))
 			r.Get("/engagements/{id}/scope", s.handleListScope)
 			r.Post("/engagements/{id}/scope", s.requireRole("operator", s.handleAddScope))
@@ -71,11 +73,23 @@ func (s *Server) Router() http.Handler {
 
 			r.Get("/email-templates", s.handleListEmailTemplates)
 			r.Post("/email-templates", s.requireRole("operator", s.handleCreateEmailTemplate))
+			r.Put("/email-templates/{id}", s.requireRole("operator", s.handleUpdateEmailTemplate))
+			r.Delete("/email-templates/{id}", s.requireRole("operator", s.handleDeleteEmailTemplate))
+			r.Post("/email-templates/{id}/duplicate", s.requireRole("operator", s.handleDuplicateEmailTemplate))
+
 			r.Get("/landing-pages", s.handleListLandingPages)
 			r.Post("/landing-pages", s.requireRole("operator", s.handleCreateLandingPage))
+			r.Put("/landing-pages/{id}", s.requireRole("operator", s.handleUpdateLandingPage))
+			r.Delete("/landing-pages/{id}", s.requireRole("operator", s.handleDeleteLandingPage))
+			r.Post("/landing-pages/{id}/duplicate", s.requireRole("operator", s.handleDuplicateLandingPage))
 			r.Post("/landing-pages/import", s.requireRole("operator", s.handleImportLandingPage))
+
 			r.Get("/sending-profiles", s.handleListSendingProfiles)
 			r.Post("/sending-profiles", s.requireRole("operator", s.handleCreateSendingProfile))
+			r.Put("/sending-profiles/{id}", s.requireRole("operator", s.handleUpdateSendingProfile))
+			r.Delete("/sending-profiles/{id}", s.requireRole("operator", s.handleDeleteSendingProfile))
+			r.Post("/sending-profiles/{id}/duplicate", s.requireRole("operator", s.handleDuplicateSendingProfile))
+			r.Post("/sending-profiles/{id}/dkim", s.requireRole("operator", s.handleGenerateDKIM))
 
 			r.Post("/campaigns/{id}/launch", s.requireRole("operator", s.handleLaunchCampaign))
 			r.Post("/campaigns/{id}/stop", s.requireRole("operator", s.handleStopCampaign))
@@ -89,6 +103,8 @@ func (s *Server) Router() http.Handler {
 
 			r.Get("/training-modules", s.handleListTraining)
 			r.Post("/training-modules", s.requireRole("operator", s.handleCreateTraining))
+			r.Put("/training-modules/{id}", s.requireRole("operator", s.handleUpdateTraining))
+			r.Delete("/training-modules/{id}", s.requireRole("operator", s.handleDeleteTraining))
 			r.Get("/training-assignments", s.handleTrainingAssignments)
 
 			r.Get("/api-keys", s.handleListAPIKeys)

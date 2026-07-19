@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useI18n } from "../i18n";
 
 interface Engagement {
   id: string;
@@ -12,6 +13,7 @@ interface Engagement {
 }
 
 export default function Engagements() {
+  const { t } = useI18n();
   const [list, setList] = useState<Engagement[]>([]);
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ client_name: "", authz_ref: "", starts_at: "", ends_at: "" });
@@ -26,6 +28,11 @@ export default function Engagements() {
   useEffect(() => {
     load();
   }, []);
+  async function del(id: string, name: string) {
+    if (!confirm(`"${name}" ${t("confirm_delete")}`)) return;
+    try { await api(`engagements/${id}`, { method: "DELETE" }); load(); }
+    catch (e: any) { setErr(e.message); }
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -49,29 +56,29 @@ export default function Engagements() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Engagements</h1>
+      <h1 className="text-2xl font-bold">{t("engagements")}</h1>
       {err && <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#fee2e2", color: "#991b1b" }}>{err}</div>}
 
       <form onSubmit={create} className="card grid gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-2 section-title">New engagement (authorization record)</div>
+        <div className="sm:col-span-2 section-title">{t("new_engagement")}</div>
         <div>
-          <label className="label">Client name</label>
+          <label className="label">{t("client_name")}</label>
           <input className="input" value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} required />
         </div>
         <div>
-          <label className="label">Authorization reference</label>
-          <input className="input" placeholder="e.g. signed SoW #2026-07-19" value={form.authz_ref} onChange={(e) => setForm({ ...form, authz_ref: e.target.value })} required />
+          <label className="label">{t("authz_ref")}</label>
+          <input className="input" placeholder="örn. imzalı SoW #2026-07-19" value={form.authz_ref} onChange={(e) => setForm({ ...form, authz_ref: e.target.value })} required />
         </div>
         <div>
-          <label className="label">Starts</label>
+          <label className="label">{t("starts")}</label>
           <input className="input" type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} required />
         </div>
         <div>
-          <label className="label">Ends</label>
+          <label className="label">{t("ends")}</label>
           <input className="input" type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} required />
         </div>
         <div className="sm:col-span-2">
-          <button className="btn">Create engagement</button>
+          <button className="btn">{t("create")}</button>
         </div>
       </form>
 
@@ -79,10 +86,10 @@ export default function Engagements() {
         <table className="data">
           <thead>
             <tr>
-              <th>Client</th>
-              <th>Authz ref</th>
-              <th>Window</th>
-              <th>Status</th>
+              <th>{t("client_name")}</th>
+              <th>{t("authz_ref")}</th>
+              <th>{t("window")}</th>
+              <th>{t("status")}</th>
               <th></th>
             </tr>
           </thead>
@@ -97,17 +104,16 @@ export default function Engagements() {
                 <td>
                   <StatusBadge status={e.status} />
                 </td>
-                <td>
-                  <Link className="btn-ghost" to={`/engagements/${e.id}`}>
-                    Open
-                  </Link>
+                <td className="flex gap-2">
+                  <Link className="btn-ghost btn-sm" to={`/engagements/${e.id}`}>{t("open_")}</Link>
+                  <button className="btn-danger btn-sm" onClick={() => del(e.id, e.client_name)}>{t("delete")}</button>
                 </td>
               </tr>
             ))}
             {list.length === 0 && (
               <tr>
                 <td colSpan={5} className="text-center muted">
-                  No engagements yet.
+                  {t("none_yet")}
                 </td>
               </tr>
             )}
