@@ -17,6 +17,8 @@ func TestCampaignServable(t *testing.T) {
 	expiredEng := activeEng
 	expiredEng.EndsAt = now.Add(-time.Hour)
 
+	draft := models.Campaign{Status: models.CampaignDraft}
+	scheduled := models.Campaign{Status: models.CampaignScheduled}
 	running := models.Campaign{Status: models.CampaignRunning}
 	completed := models.Campaign{Status: models.CampaignDone}
 	stopped := models.Campaign{Status: models.CampaignStopped}
@@ -27,7 +29,9 @@ func TestCampaignServable(t *testing.T) {
 		c    models.Campaign
 		want bool
 	}{
-		{"active engagement, running campaign", activeEng, running, true},
+		{"active engagement, draft campaign — not launched yet, not servable", activeEng, draft, false},
+		{"active engagement, scheduled campaign — not started sending yet, not servable", activeEng, scheduled, false},
+		{"active engagement, running campaign — servable", activeEng, running, true},
 		{"active engagement, completed campaign — late clicks still tracked", activeEng, completed, true},
 		{"active engagement, stopped campaign — access cut off", activeEng, stopped, false},
 		{"closed engagement, running campaign — access cut off", closedEng, running, false},
