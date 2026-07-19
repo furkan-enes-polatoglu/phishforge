@@ -10,7 +10,7 @@ import (
 )
 
 type loginReq struct {
-	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -18,7 +18,7 @@ type tokenResp struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	Role         string `json:"role"`
-	Email        string `json:"email"`
+	Username     string `json:"username"`
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -27,8 +27,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
-	u, err := s.st.UserByEmail(r.Context(), req.Email)
+	req.Username = strings.ToLower(strings.TrimSpace(req.Username))
+	u, err := s.st.UserByUsername(r.Context(), req.Username)
 	if errors.Is(err, store.ErrNotFound) {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
@@ -45,7 +45,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	access, _ := s.tokens.Access(u.ID, u.OrgID, string(u.Role))
 	refresh, _ := s.tokens.Refresh(u.ID, u.OrgID, string(u.Role))
 	_ = s.st.Audit(r.Context(), u.OrgID, &u.ID, "auth.login", "user", u.ID.String(), nil)
-	writeJSON(w, http.StatusOK, tokenResp{AccessToken: access, RefreshToken: refresh, Role: string(u.Role), Email: u.Email})
+	writeJSON(w, http.StatusOK, tokenResp{AccessToken: access, RefreshToken: refresh, Role: string(u.Role), Username: u.Username})
 }
 
 type refreshReq struct {
@@ -75,6 +75,6 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id": u.ID, "email": u.Email, "role": u.Role, "org_id": u.OrgID,
+		"id": u.ID, "username": u.Username, "role": u.Role, "org_id": u.OrgID,
 	})
 }

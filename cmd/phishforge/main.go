@@ -154,8 +154,8 @@ func bootstrapAdmin(ctx context.Context, cfg *config.Config, st *store.Store) {
 	if n > 0 {
 		return
 	}
-	if cfg.BootstrapAdminEmail == "" || cfg.BootstrapAdminPass == "" {
-		log.Println("bootstrap: no users yet; set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD to create the first admin")
+	if cfg.BootstrapAdminUsername == "" || cfg.BootstrapAdminPass == "" {
+		log.Println("bootstrap: no users yet; set BOOTSTRAP_ADMIN_USERNAME and BOOTSTRAP_ADMIN_PASSWORD to create the first admin")
 		return
 	}
 	org, err := st.CreateOrg(ctx, cfg.BootstrapOrgName)
@@ -168,10 +168,10 @@ func bootstrapAdmin(ctx context.Context, cfg *config.Config, st *store.Store) {
 		log.Printf("bootstrap: hash: %v", err)
 		return
 	}
-	u, err := st.CreateUser(ctx, org.ID, strings.ToLower(cfg.BootstrapAdminEmail), hash, models.RoleAdmin)
+	u, err := st.CreateUser(ctx, org.ID, strings.ToLower(cfg.BootstrapAdminUsername), hash, models.RoleAdmin)
 	if err != nil {
 		log.Printf("bootstrap: create user: %v", err)
 		return
 	}
-	log.Printf("bootstrap: created org %q and admin %s", org.Name, u.Email)
+	log.Printf("bootstrap: created org %q and admin %s", org.Name, u.Username)
 }

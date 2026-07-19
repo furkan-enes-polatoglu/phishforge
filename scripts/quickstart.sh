@@ -23,18 +23,18 @@ if [ ! -f .env ]; then
   echo "→ Creating .env with random secrets..."
   cp .env.example .env
   JWT="$(gen)"; RID="$(gen)"
-  ADMIN_EMAIL="${ADMIN_EMAIL:-admin@phishforge.local}"
+  ADMIN_USER="${ADMIN_USER:-admin}"
   ADMIN_PASS="${ADMIN_PASS:-$(gen | cut -c1-16)}"
   sed -i.bak "s|^JWT_SECRET=.*|JWT_SECRET=${JWT}|"                       .env
   sed -i.bak "s|^RID_SECRET=.*|RID_SECRET=${RID}|"                       .env
-  sed -i.bak "s|^BOOTSTRAP_ADMIN_EMAIL=.*|BOOTSTRAP_ADMIN_EMAIL=${ADMIN_EMAIL}|" .env
+  sed -i.bak "s|^BOOTSTRAP_ADMIN_USERNAME=.*|BOOTSTRAP_ADMIN_USERNAME=${ADMIN_USER}|" .env
   sed -i.bak "s|^BOOTSTRAP_ADMIN_PASSWORD=.*|BOOTSTRAP_ADMIN_PASSWORD=${ADMIN_PASS}|" .env
   rm -f .env.bak
   echo "✓ .env created."
   echo
   echo "  ┌─────────────────────────────────────────────"
   echo "  │  Admin login (save these!):"
-  echo "  │    email:    ${ADMIN_EMAIL}"
+  echo "  │    username: ${ADMIN_USER}"
   echo "  │    password: ${ADMIN_PASS}"
   echo "  └─────────────────────────────────────────────"
   echo

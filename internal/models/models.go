@@ -38,7 +38,7 @@ type Organization struct {
 type User struct {
 	ID           uuid.UUID `json:"id"`
 	OrgID        uuid.UUID `json:"org_id"`
-	Email        string    `json:"email"`
+	Username     string    `json:"username"`
 	PasswordHash string    `json:"-"`
 	Role         Role      `json:"role"`
 	CreatedAt    time.Time `json:"created_at"`

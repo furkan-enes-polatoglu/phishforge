@@ -14,7 +14,7 @@ import Training from "./pages/Training";
 import Settings from "./pages/Settings";
 
 interface Me {
-  email: string;
+  username: string;
   role: string;
 }
 
@@ -47,7 +47,7 @@ function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
           ))}
         </nav>
         <div className="mt-4 border-t pt-4" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
-          <div className="px-2 text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>{me.email}</div>
+          <div className="px-2 text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>{me.username}</div>
           <div className="mt-1 flex items-center justify-between px-2">
             <span className="badge badge-blue">{me.role}</span>
             <button className="side-logout" onClick={onLogout}>{t("logout")}</button>

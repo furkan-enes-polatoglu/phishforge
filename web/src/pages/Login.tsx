@@ -4,7 +4,7 @@ import { useI18n, Lang } from "../i18n";
 
 export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { t, lang, setLang } = useI18n();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -14,7 +14,7 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
     setErr("");
     setBusy(true);
     try {
-      await login(email, password);
+      await login(username, password);
       onLoggedIn();
     } catch (e: any) {
       setErr(e.message || "login failed");
@@ -50,8 +50,18 @@ export default function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
         </div>
         {err && <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "#fee2e2", color: "#991b1b" }}>{err}</div>}
         <div>
-          <label className="label">{t("email")}</label>
-          <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+          <label className="label">{t("username")}</label>
+          <input
+            className="input"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+          />
         </div>
         <div>
           <label className="label">{t("password")}</label>

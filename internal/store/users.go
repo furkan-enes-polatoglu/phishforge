@@ -28,24 +28,24 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 	return n, err
 }
 
-func (s *Store) CreateUser(ctx context.Context, orgID uuid.UUID, email, passwordHash string, role models.Role) (*models.User, error) {
+func (s *Store) CreateUser(ctx context.Context, orgID uuid.UUID, username, passwordHash string, role models.Role) (*models.User, error) {
 	var u models.User
 	err := s.pool.QueryRow(ctx,
-		`INSERT INTO users(org_id, email, password_hash, role)
-		 VALUES($1,$2,$3,$4) RETURNING id, org_id, email, password_hash, role, created_at`,
-		orgID, email, passwordHash, string(role),
-	).Scan(&u.ID, &u.OrgID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt)
+		`INSERT INTO users(org_id, username, password_hash, role)
+		 VALUES($1,$2,$3,$4) RETURNING id, org_id, username, password_hash, role, created_at`,
+		orgID, username, passwordHash, string(role),
+	).Scan(&u.ID, &u.OrgID, &u.Username, &u.PasswordHash, &u.Role, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &u, nil
 }
 
-func (s *Store) UserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (s *Store) UserByUsername(ctx context.Context, username string) (*models.User, error) {
 	var u models.User
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, org_id, email, password_hash, role, created_at FROM users WHERE email=$1`, email,
-	).Scan(&u.ID, &u.OrgID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt)
+		`SELECT id, org_id, username, password_hash, role, created_at FROM users WHERE username=$1`, username,
+	).Scan(&u.ID, &u.OrgID, &u.Username, &u.PasswordHash, &u.Role, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -58,8 +58,8 @@ func (s *Store) UserByEmail(ctx context.Context, email string) (*models.User, er
 func (s *Store) UserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var u models.User
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, org_id, email, password_hash, role, created_at FROM users WHERE id=$1`, id,
-	).Scan(&u.ID, &u.OrgID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt)
+		`SELECT id, org_id, username, password_hash, role, created_at FROM users WHERE id=$1`, id,
+	).Scan(&u.ID, &u.OrgID, &u.Username, &u.PasswordHash, &u.Role, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -71,7 +71,7 @@ func (s *Store) UserByID(ctx context.Context, id uuid.UUID) (*models.User, error
 
 func (s *Store) ListUsers(ctx context.Context, orgID uuid.UUID) ([]models.User, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id, org_id, email, password_hash, role, created_at FROM users WHERE org_id=$1 ORDER BY created_at`, orgID)
+		`SELECT id, org_id, username, password_hash, role, created_at FROM users WHERE org_id=$1 ORDER BY created_at`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *Store) ListUsers(ctx context.Context, orgID uuid.UUID) ([]models.User, 
 	out := []models.User{}
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.OrgID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.OrgID, &u.Username, &u.PasswordHash, &u.Role, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, u)

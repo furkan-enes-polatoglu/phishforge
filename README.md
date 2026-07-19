@@ -94,14 +94,14 @@ The script:
 Then open **<http://localhost:8080>** and log in with the printed credentials.
 
 > Want to choose your own admin login? Set them before running:
-> `ADMIN_EMAIL="you@example.com" ADMIN_PASS="a-strong-password" ./scripts/quickstart.sh`
+> `ADMIN_USER="admin" ADMIN_PASS="a-strong-password" ./scripts/quickstart.sh`
 
 ## Manual start (if you prefer)
 
 ```bash
 cp .env.example .env
 make seed-secrets          # prints JWT_SECRET and RID_SECRET to paste into .env
-# also set BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD in .env
+# also set BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD in .env
 docker compose up -d --build
 ```
 
