@@ -13,16 +13,16 @@ import (
 
 func (s *Store) CreateSendingProfile(ctx context.Context, p *models.SendingProfile) error {
 	return s.pool.QueryRow(ctx,
-		`INSERT INTO sending_profiles(org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id, created_at`,
+		`INSERT INTO sending_profiles(org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,x_mailer)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id, created_at`,
 		p.OrgID, p.Name, p.SMTPHost, p.SMTPPort, p.Username, p.Password, p.FromAddress, p.FromName, p.UseTLS,
-		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM,
+		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, p.XMailer,
 	).Scan(&p.ID, &p.CreatedAt)
 }
 
 func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]models.SendingProfile, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id,org_id,name,smtp_host,smtp_port,username,from_address,from_name,use_tls,dkim_domain,dkim_selector,sign_dkim,created_at
+		`SELECT id,org_id,name,smtp_host,smtp_port,username,from_address,from_name,use_tls,dkim_domain,dkim_selector,sign_dkim,x_mailer,created_at
 		 FROM sending_profiles WHERE org_id=$1 ORDER BY created_at DESC`, orgID)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]mod
 	out := []models.SendingProfile{}
 	for rows.Next() {
 		var p models.SendingProfile
-		if err := rows.Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.FromAddress, &p.FromName, &p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.SignDKIM, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.FromAddress, &p.FromName, &p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.SignDKIM, &p.XMailer, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -43,9 +43,9 @@ func (s *Store) ListSendingProfiles(ctx context.Context, orgID uuid.UUID) ([]mod
 func (s *Store) GetSendingProfileFull(ctx context.Context, orgID, id uuid.UUID) (*models.SendingProfile, error) {
 	var p models.SendingProfile
 	err := s.pool.QueryRow(ctx,
-		`SELECT id,org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,created_at
+		`SELECT id,org_id,name,smtp_host,smtp_port,username,password,from_address,from_name,use_tls,dkim_domain,dkim_selector,dkim_private_key,sign_dkim,x_mailer,created_at
 		 FROM sending_profiles WHERE org_id=$1 AND id=$2`, orgID, id,
-	).Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.Password, &p.FromAddress, &p.FromName, &p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.DKIMPrivateKey, &p.SignDKIM, &p.CreatedAt)
+	).Scan(&p.ID, &p.OrgID, &p.Name, &p.SMTPHost, &p.SMTPPort, &p.Username, &p.Password, &p.FromAddress, &p.FromName, &p.UseTLS, &p.DKIMDomain, &p.DKIMSelector, &p.DKIMPrivateKey, &p.SignDKIM, &p.XMailer, &p.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -57,10 +57,10 @@ func (s *Store) GetSendingProfileFull(ctx context.Context, orgID, id uuid.UUID) 
 
 func (s *Store) UpdateSendingProfile(ctx context.Context, orgID uuid.UUID, p *models.SendingProfile) error {
 	ct, err := s.pool.Exec(ctx,
-		`UPDATE sending_profiles SET name=$1,smtp_host=$2,smtp_port=$3,username=$4,password=$5,from_address=$6,from_name=$7,use_tls=$8,dkim_domain=$9,dkim_selector=$10,dkim_private_key=$11,sign_dkim=$12
-		 WHERE org_id=$13 AND id=$14`,
+		`UPDATE sending_profiles SET name=$1,smtp_host=$2,smtp_port=$3,username=$4,password=$5,from_address=$6,from_name=$7,use_tls=$8,dkim_domain=$9,dkim_selector=$10,dkim_private_key=$11,sign_dkim=$12,x_mailer=$13
+		 WHERE org_id=$14 AND id=$15`,
 		p.Name, p.SMTPHost, p.SMTPPort, p.Username, p.Password, p.FromAddress, p.FromName, p.UseTLS,
-		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, orgID, p.ID)
+		p.DKIMDomain, p.DKIMSelector, p.DKIMPrivateKey, p.SignDKIM, p.XMailer, orgID, p.ID)
 	if err != nil {
 		return err
 	}
@@ -79,17 +79,18 @@ func (s *Store) DeleteSendingProfile(ctx context.Context, orgID, id uuid.UUID) e
 
 func (s *Store) CreateTarget(ctx context.Context, t *models.Target) error {
 	return s.pool.QueryRow(ctx,
-		`INSERT INTO targets(engagement_id,email,first_name,last_name,position,timezone)
-		 VALUES($1,$2,$3,$4,$5,$6)
-		 ON CONFLICT (engagement_id,email) DO UPDATE SET first_name=EXCLUDED.first_name
+		`INSERT INTO targets(engagement_id,email,first_name,last_name,position,department,is_vip,timezone)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+		 ON CONFLICT (engagement_id,email) DO UPDATE SET first_name=EXCLUDED.first_name, last_name=EXCLUDED.last_name,
+		   position=EXCLUDED.position, department=EXCLUDED.department, is_vip=EXCLUDED.is_vip
 		 RETURNING id, created_at`,
-		t.EngagementID, t.Email, t.FirstName, t.LastName, t.Position, t.Timezone,
+		t.EngagementID, t.Email, t.FirstName, t.LastName, t.Position, t.Department, t.IsVIP, t.Timezone,
 	).Scan(&t.ID, &t.CreatedAt)
 }
 
 func (s *Store) ListTargets(ctx context.Context, engagementID uuid.UUID) ([]models.Target, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT id,engagement_id,email,first_name,last_name,position,timezone,created_at
+		`SELECT id,engagement_id,email,first_name,last_name,position,department,is_vip,timezone,created_at
 		 FROM targets WHERE engagement_id=$1 ORDER BY created_at`, engagementID)
 	if err != nil {
 		return nil, err
@@ -98,7 +99,7 @@ func (s *Store) ListTargets(ctx context.Context, engagementID uuid.UUID) ([]mode
 	out := []models.Target{}
 	for rows.Next() {
 		var t models.Target
-		if err := rows.Scan(&t.ID, &t.EngagementID, &t.Email, &t.FirstName, &t.LastName, &t.Position, &t.Timezone, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.EngagementID, &t.Email, &t.FirstName, &t.LastName, &t.Position, &t.Department, &t.IsVIP, &t.Timezone, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

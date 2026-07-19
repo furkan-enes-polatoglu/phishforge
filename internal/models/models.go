@@ -96,6 +96,7 @@ type SendingProfile struct {
 	DKIMSelector   string `json:"dkim_selector"`
 	DKIMPrivateKey string `json:"-"` // never serialized
 	SignDKIM       bool   `json:"sign_dkim"`
+	XMailer        string `json:"x_mailer"` // realistic mail-client header, e.g. "Microsoft Outlook 16.0"
 	CreatedAt      time.Time `json:"created_at"`
 }
 
@@ -106,6 +107,8 @@ type Target struct {
 	FirstName    string    `json:"first_name"`
 	LastName     string    `json:"last_name"`
 	Position     string    `json:"position"`
+	Department   string    `json:"department"`
+	IsVIP        bool      `json:"is_vip"`
 	Timezone     string    `json:"timezone"`
 	CreatedAt    time.Time `json:"created_at"`
 }
@@ -236,11 +239,13 @@ type CampaignTarget struct {
 type EventType string
 
 const (
-	EventSent   EventType = "sent"
-	EventOpen   EventType = "open"
-	EventClick  EventType = "click"
-	EventSubmit EventType = "submit"
-	EventReport EventType = "report"
+	EventSent           EventType = "sent"
+	EventOpen           EventType = "open"
+	EventClick          EventType = "click"
+	EventSubmit         EventType = "submit"
+	EventReport         EventType = "report"
+	EventScan           EventType = "scan"            // QR code (quishing) scanned
+	EventAttachmentOpen EventType = "attachment_open" // simulated malicious attachment opened
 )
 
 type Event struct {

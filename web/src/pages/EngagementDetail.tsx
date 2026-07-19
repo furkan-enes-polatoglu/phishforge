@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../api";
+import { api, getAccess } from "../api";
 import { StatusBadge } from "./Engagements";
 import { useI18n } from "../i18n";
 
@@ -53,6 +53,40 @@ export default function EngagementDetail() {
       if (res.rejected_out_of_scope?.length) setMsg(`Rejected (out of scope): ${res.rejected_out_of_scope.join(", ")}`);
       loadAll();
     } catch (e: any) { setMsg(e.message); }
+  }
+
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  async function importFile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file) return;
+    setMsg(""); setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/engagements/${id}/targets/import`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getAccess()}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "import failed");
+      let m = `${data.created?.length ?? 0} ${t("targets_added")}.`;
+      if (data.rejected_out_of_scope?.length) m += ` ${data.rejected_out_of_scope.length} ${t("rejected_scope")}.`;
+      if (data.parse_errors?.length) m += ` ${data.parse_errors.length} ${t("parse_errors")}.`;
+      setMsg(m);
+      setFile(null);
+      loadAll();
+    } catch (e: any) { setMsg(e.message); }
+    finally { setUploading(false); }
+  }
+  function downloadTemplate() {
+    const csv = "Ad Soyad,E-posta,Departman,Pozisyon,Saat Dilimi,VIP\nAyşe Yılmaz,ayse.yilmaz@ornek.com,Finans,Uzman,Europe/Istanbul,\nMehmet Demir,mehmet.demir@ornek.com,Yönetim,Genel Müdür,Europe/Istanbul,evet\n";
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "phishforge-hedef-sablonu.csv"; a.click();
+    URL.revokeObjectURL(url);
   }
 
   const [camp, setCamp] = useState<any>({
@@ -128,17 +162,29 @@ export default function EngagementDetail() {
           </ul>
         </div>
 
-        <div className="card space-y-3">
+        <div className="card space-y-4">
           <div className="section-title">{t("targets")} ({targets.length})</div>
+
+          <div className="space-y-2 rounded-lg border p-3" style={{ borderColor: "var(--pf-border)", background: "#fafbff" }}>
+            <div className="text-sm font-semibold">{t("import_from_file")}</div>
+            <p className="text-xs muted">{t("import_file_help")}</p>
+            <button type="button" className="btn-ghost btn-sm" onClick={downloadTemplate}>{t("download_template")}</button>
+            <form onSubmit={importFile} className="flex flex-wrap gap-2">
+              <input type="file" accept=".csv,.xlsx" onChange={(e) => setFile(e.target.files?.[0] || null)} className="input" style={{ maxWidth: 220 }} />
+              <button className="btn btn-sm" disabled={!file || uploading}>{uploading ? t("fetching") : t("upload_and_import")}</button>
+            </form>
+          </div>
+
           <form onSubmit={importTargets} className="space-y-2">
-            <textarea className="input h-24 font-mono text-xs" placeholder="email,Ad,Soyad,ZamanDilimi (satır başına bir)" value={bulk} onChange={(e) => setBulk(e.target.value)} />
-            <button className="btn">{t("import_scope_checked")}</button>
+            <textarea className="input h-20 font-mono text-xs" placeholder="email,Ad,Soyad,ZamanDilimi (satır başına bir)" value={bulk} onChange={(e) => setBulk(e.target.value)} />
+            <button className="btn-ghost btn-sm">{t("import_scope_checked")}</button>
           </form>
+
           <div className="max-h-40 overflow-y-auto text-sm">
-            {targets.map((t) => (
-              <div key={t.id} className="flex justify-between border-b py-1" style={{ borderColor: "#eef1f7" }}>
-                <span>{t.email}</span>
-                <span className="muted">{t.timezone}</span>
+            {targets.map((tg) => (
+              <div key={tg.id} className="flex items-center justify-between border-b py-1" style={{ borderColor: "#eef1f7" }}>
+                <span>{tg.email} {tg.is_vip && <span className="badge badge-amber">VIP</span>}</span>
+                <span className="muted">{tg.department}</span>
               </div>
             ))}
           </div>
@@ -189,16 +235,18 @@ export default function EngagementDetail() {
       <div className="card">
         <div className="section-title mb-3">{t("risk_scores")}</div>
         <table className="data">
-          <thead><tr><th>{t("target")}</th><th>{t("opens")}</th><th>{t("clicks")}</th><th>{t("submits")}</th><th>{t("reports")}</th><th>{t("score")}</th><th>{t("level")}</th></tr></thead>
+          <thead><tr><th>{t("target")}</th><th>{t("department")}</th><th>{t("opens")}</th><th>{t("clicks")}</th><th>{t("submits")}</th><th>{t("reports")}</th><th>{t("score")}</th><th>{t("level")}</th></tr></thead>
           <tbody>
             {risk.map((r, i) => (
               <tr key={i}>
-                <td>{r.email}</td><td>{r.opens}</td><td>{r.clicks}</td><td>{r.submits}</td><td>{r.reports}</td>
+                <td>{r.email} {r.is_vip && <span className="badge badge-amber">VIP</span>}</td>
+                <td className="muted">{r.department}</td>
+                <td>{r.opens}</td><td>{r.clicks}</td><td>{r.submits}</td><td>{r.reports}</td>
                 <td className="font-semibold">{r.score}</td>
                 <td><span className={`badge ${r.level === "high" ? "badge-red" : r.level === "medium" ? "badge-amber" : "badge-green"}`}>{r.level}</span></td>
               </tr>
             ))}
-            {risk.length === 0 && <tr><td colSpan={7} className="text-center muted">{t("none_yet")}</td></tr>}
+            {risk.length === 0 && <tr><td colSpan={8} className="text-center muted">{t("none_yet")}</td></tr>}
           </tbody>
         </table>
       </div>

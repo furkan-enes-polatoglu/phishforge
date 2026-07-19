@@ -16,6 +16,17 @@ export default function Deliverability() {
     finally { setBusy(false); }
   }
 
+  const [seed, setSeed] = useState({ host: "", port: 993, username: "", password: "", use_tls: true, subject_marker: "" });
+  const [seedRes, setSeedRes] = useState<any>(null);
+  const [seedErr, setSeedErr] = useState("");
+  const [seedBusy, setSeedBusy] = useState(false);
+  async function runSeed(e: React.FormEvent) {
+    e.preventDefault(); setSeedErr(""); setSeedBusy(true); setSeedRes(null);
+    try { setSeedRes(await api("deliverability/seed-check", { method: "POST", body: seed })); }
+    catch (e: any) { setSeedErr(e.message); }
+    finally { setSeedBusy(false); }
+  }
+
   const badge = (status: string) =>
     status === "ok" ? "badge-green" : status === "warn" ? "badge-amber" : "badge-red";
   const rec = (label: string, r: any) =>
@@ -77,6 +88,29 @@ export default function Deliverability() {
           </div>
         </div>
       )}
+
+      <div className="card space-y-3">
+        <div className="section-title">{t("seed_test")}</div>
+        <p className="text-xs muted">{t("seed_test_help")}</p>
+        <form onSubmit={runSeed} className="grid gap-3 sm:grid-cols-2">
+          <input className="input" placeholder={t("imap_host") + " (örn. imap.gmail.com)"} value={seed.host} onChange={(e) => setSeed({ ...seed, host: e.target.value })} required />
+          <input className="input" type="number" placeholder="Port (993)" value={seed.port} onChange={(e) => setSeed({ ...seed, port: +e.target.value })} />
+          <input className="input" placeholder={t("username")} value={seed.username} onChange={(e) => setSeed({ ...seed, username: e.target.value })} required />
+          <input className="input" type="password" placeholder={t("password")} value={seed.password} onChange={(e) => setSeed({ ...seed, password: e.target.value })} required />
+          <input className="input sm:col-span-2" placeholder={t("subject_marker")} value={seed.subject_marker} onChange={(e) => setSeed({ ...seed, subject_marker: e.target.value })} required />
+          <label className="checkbox-row"><input type="checkbox" checked={seed.use_tls} onChange={(e) => setSeed({ ...seed, use_tls: e.target.checked })} /> TLS</label>
+          <div><button className="btn" disabled={seedBusy}>{seedBusy ? t("checking") : t("run_seed_check")}</button></div>
+        </form>
+        {seedErr && <div style={{ color: "#b91c1c" }}>{seedErr}</div>}
+        {seedRes && (
+          <div className="rounded-lg px-3 py-2 text-sm" style={{
+            background: seedRes.found ? (seedRes.folder === "INBOX" ? "#dcfce7" : "#fee2e2") : "#f1f5f9",
+            color: seedRes.found ? (seedRes.folder === "INBOX" ? "#166534" : "#991b1b") : "#475569",
+          }}>
+            {!seedRes.found ? t("seed_not_found") : seedRes.folder === "INBOX" ? `${t("seed_found_inbox")} (${seedRes.folder})` : `${t("seed_found_spam")} (${seedRes.folder})`}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

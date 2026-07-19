@@ -73,6 +73,18 @@ const dict: Record<string, { tr: string; en: string }> = {
   no_rules: { tr: "Kural yok — angajman aktifleştirilemez.", en: "No rules — engagement cannot be activated." },
   targets: { tr: "Hedefler", en: "Targets" },
   import_scope_checked: { tr: "İçe aktar (kapsam kontrollü)", en: "Import (scope-checked)" },
+  import_from_file: { tr: "Excel/CSV ile içe aktar", en: "Import from Excel/CSV" },
+  import_file_help: {
+    tr: "İlk satır başlık olmalı. Zorunlu: E-posta. Opsiyonel: Ad Soyad (veya Ad + Soyad ayrı sütunlarda), Departman, Pozisyon, Saat Dilimi, VIP. .xlsx veya .csv kabul edilir.",
+    en: "First row must be headers. Required: Email. Optional: Full Name (or First + Last separately), Department, Position, Timezone, VIP. .xlsx or .csv accepted.",
+  },
+  download_template: { tr: "Şablonu indir (CSV)", en: "Download template (CSV)" },
+  upload_and_import: { tr: "Yükle ve içe aktar", en: "Upload and import" },
+  department: { tr: "Departman", en: "Department" },
+  vip: { tr: "VIP", en: "VIP" },
+  parse_errors: { tr: "satırda ayrıştırma hatası", en: "row parse errors" },
+  targets_added: { tr: "hedef eklendi", en: "targets added" },
+  rejected_scope: { tr: "kapsam dışı reddedildi", en: "rejected (out of scope)" },
 
   // campaign
   new_campaign: { tr: "Yeni kampanya", en: "New campaign" },
@@ -107,8 +119,11 @@ const dict: Record<string, { tr: string; en: string }> = {
   landing_pages: { tr: "Açılış sayfaları", en: "Landing pages" },
   sending_profiles: { tr: "Gönderim profilleri", en: "Sending profiles" },
   live_preview: { tr: "Canlı önizleme", en: "Live preview" },
+  open_full_tab: { tr: "Tam ekran, yeni sekmede aç", en: "Open full-screen in new tab" },
   subject: { tr: "Konu", en: "Subject" },
   merge_tags: { tr: "Birleştirme etiketleri", en: "Merge-tags" },
+  qr_insert_hint: { tr: "QR kod (quishing) eklemek için: ", en: "To insert a QR code (quishing): " },
+  attachment_insert_hint: { tr: "Sahte ek eklemek için: ", en: "To insert a simulated attachment: " },
   clone_from_url: { tr: "URL'den sayfa klonla", en: "Clone a page from URL" },
   import: { tr: "İçe aktar", en: "Import" },
   fetching: { tr: "Getiriliyor…", en: "Fetching…" },
@@ -127,6 +142,8 @@ const dict: Record<string, { tr: string; en: string }> = {
   port: { tr: "Port", en: "Port" },
   username: { tr: "Kullanıcı adı", en: "Username" },
   leave_blank_keep: { tr: "(boş bırakırsanız mevcut korunur)", en: "(leave blank to keep current)" },
+  x_mailer: { tr: "Posta istemcisi başlığı (X-Mailer)", en: "Mail client header (X-Mailer)" },
+  x_mailer_help: { tr: "Gerçek bir e-posta istemcisi gibi görünmesi için (opsiyonel), örn. \"Microsoft Outlook 16.0\"", en: "Optional, makes the message look like it came from a real client, e.g. \"Microsoft Outlook 16.0\"" },
   dkim_signing: { tr: "DKIM imzalama (teslimat)", en: "DKIM signing (deliverability)" },
   dkim_help: { tr: "DKIM, yetkili göndericiler için teslimatı artıran standart bir kimlik doğrulamadır. Anahtar üretin ve DNS TXT kaydını yayınlayın.", en: "DKIM is a standard authentication that improves deliverability for authorized senders. Generate a key and publish the DNS TXT record." },
   dkim_domain: { tr: "DKIM alan adı", en: "DKIM domain" },
@@ -155,6 +172,17 @@ const dict: Record<string, { tr: string; en: string }> = {
   authentication: { tr: "Kimlik doğrulama", en: "Authentication" },
   advice: { tr: "Öneriler", en: "Advice" },
   blocklists: { tr: "Kara listeler", en: "Blocklists" },
+  seed_test: { tr: "Seed-liste gelen kutusu testi", en: "Seed-list inbox placement test" },
+  seed_test_help: {
+    tr: "Gerçek bir e-posta hesabına (seed) gönderdiğiniz test postasının gelen kutusuna mı yoksa spam'e mi düştüğünü IMAP ile otomatik kontrol eder. Önce konu satırında benzersiz bir işaretle (marker) bir kampanya gönderin, sonra o kutunun IMAP bilgileriyle burada kontrol edin.",
+    en: "Automatically checks via IMAP whether a test send landed in the inbox or spam of a real seed mailbox. Send a campaign with a unique subject marker first, then check that mailbox's IMAP here.",
+  },
+  imap_host: { tr: "IMAP sunucusu", en: "IMAP host" },
+  subject_marker: { tr: "Konu işareti (benzersiz metin)", en: "Subject marker (unique text)" },
+  run_seed_check: { tr: "Kontrol et", en: "Check" },
+  seed_found_inbox: { tr: "Gelen kutusunda bulundu", en: "Found in inbox" },
+  seed_found_spam: { tr: "Spam/Junk klasöründe bulundu", en: "Found in spam/junk" },
+  seed_not_found: { tr: "Henüz bulunamadı (gecikmiş olabilir ya da başka bir klasörde)", en: "Not found yet (may be delayed or in another folder)" },
 
   // settings
   settings: { tr: "Ayarlar", en: "Settings" },
@@ -193,6 +221,13 @@ const dict: Record<string, { tr: string; en: string }> = {
   timeline: { tr: "Zaman çizelgesi", en: "Timeline" },
   event: { tr: "Olay", en: "Event" },
   captured_data: { tr: "Yakalanan veri", en: "Captured data" },
+  event_sent: { tr: "gönderildi", en: "sent" },
+  event_open: { tr: "açıldı", en: "opened" },
+  event_click: { tr: "tıklandı", en: "clicked" },
+  event_submit: { tr: "gönderim", en: "submitted" },
+  event_report: { tr: "bildirildi", en: "reported" },
+  event_scan: { tr: "QR tarandı", en: "QR scanned" },
+  event_attachment_open: { tr: "ek açıldı", en: "attachment opened" },
 };
 
 interface I18nCtx {

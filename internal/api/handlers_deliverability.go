@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/furkan-enes-polatoglu/phishforge/internal/deliverability"
+	"github.com/furkan-enes-polatoglu/phishforge/internal/seedtest"
 )
 
 type deliverabilityReq struct {
@@ -43,4 +44,43 @@ func (s *Server) handleDeliverabilityCheck(w http.ResponseWriter, r *http.Reques
 	}
 	_ = s.st.Audit(r.Context(), p.OrgID, &p.UserID, "deliverability.check", "domain", req.Domain, nil)
 	writeJSON(w, http.StatusOK, res)
+}
+
+type seedCheckReq struct {
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	UseTLS        bool   `json:"use_tls"`
+	SubjectMarker string `json:"subject_marker"`
+}
+
+// handleSeedCheck performs a real inbox-placement check: it logs into a seed
+// mailbox over IMAP and reports whether a marked test message landed in the
+// inbox or a spam/junk folder. Requires a test email to have already been sent
+// to the seed address with subject_marker somewhere in its subject line.
+func (s *Server) handleSeedCheck(w http.ResponseWriter, r *http.Request) {
+	p := mustPrincipal(r)
+	var req seedCheckReq
+	if err := decode(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if strings.TrimSpace(req.Host) == "" || strings.TrimSpace(req.SubjectMarker) == "" {
+		writeError(w, http.StatusBadRequest, "host ve subject_marker zorunlu")
+		return
+	}
+	if req.Port == 0 {
+		req.Port = 993
+	}
+	folder, found, err := seedtest.CheckPlacement(seedtest.Config{
+		Host: req.Host, Port: req.Port, Username: req.Username, Password: req.Password, UseTLS: req.UseTLS,
+	}, req.SubjectMarker)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	_ = s.st.Audit(r.Context(), p.OrgID, &p.UserID, "deliverability.seed_check", "seed_mailbox", req.Host,
+		map[string]any{"found": found, "folder": folder})
+	writeJSON(w, http.StatusOK, map[string]any{"found": found, "folder": folder})
 }

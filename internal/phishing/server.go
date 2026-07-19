@@ -17,6 +17,7 @@ import (
 	"github.com/furkan-enes-polatoglu/phishforge/internal/models"
 	"github.com/furkan-enes-polatoglu/phishforge/internal/store"
 	"github.com/go-chi/chi/v5"
+	"github.com/skip2/go-qrcode"
 )
 
 // 1x1 transparent GIF.
@@ -43,6 +44,9 @@ func (s *Server) Router() http.Handler {
 	r.Get("/l/{rid}", s.handleClick)
 	r.Post("/l/{rid}", s.handleSubmit)
 	r.Get("/r/{rid}", s.handleReport)
+	r.Get("/q/{rid}", s.handleScan)       // QR code scanned (quishing simulation)
+	r.Get("/qr/{rid}", s.handleQRImage)   // PNG QR code embeddable in email
+	r.Get("/a/{rid}", s.handleAttachment) // simulated malicious attachment opened
 	r.Get("/training/{token}", s.handleTraining)
 	return r
 }
@@ -167,6 +171,65 @@ func (s *Server) handleSubmit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, lp.RedirectURL, http.StatusFound)
 		return
 	}
+	if trainingURL := s.autoAssignTraining(r.Context(), c.ID, t.ID); trainingURL != "" {
+		http.Redirect(w, r, trainingURL, http.StatusFound)
+		return
+	}
+	writeAwareness(w)
+}
+
+// handleScan records a QR-code scan (quishing simulation) then redirects to the
+// normal landing/click flow, so the funnel distinguishes "scanned a QR" from
+// "clicked a link" while still measuring the full click-through afterwards.
+func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
+	rid := chi.URLParam(r, "rid")
+	ct, c, t, ok := s.resolve(r.Context(), rid)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	_ = s.st.RecordEvent(r.Context(), &models.Event{
+		CampaignTargetID: ct.ID, Type: models.EventScan,
+		IP: clientIP(r), UserAgent: r.UserAgent(),
+	})
+	s.notifyEvent(c.ID, "scan", t.Email)
+	http.Redirect(w, r, "/l/"+rid, http.StatusFound)
+}
+
+// handleQRImage renders a PNG QR code encoding the scan-tracked URL, meant to be
+// embedded in an email via <img src="{{.QRCodeURL}}">.
+func (s *Server) handleQRImage(w http.ResponseWriter, r *http.Request) {
+	rid := chi.URLParam(r, "rid")
+	if _, err := auth.VerifyRID(s.cfg.RIDSecret, rid); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	png, err := qrcode.Encode(s.cfg.PhishBaseURL+"/q/"+rid, qrcode.Medium, 256)
+	if err != nil {
+		http.Error(w, "qr generation failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(png)
+}
+
+// handleAttachment simulates a malicious-attachment open (e.g. a macro-enabled
+// document or a booby-trapped PDF in a real attack). It only records the event
+// and hands the target to awareness training — no file is ever executed or
+// delivered.
+func (s *Server) handleAttachment(w http.ResponseWriter, r *http.Request) {
+	rid := chi.URLParam(r, "rid")
+	ct, c, t, ok := s.resolve(r.Context(), rid)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	_ = s.st.RecordEvent(r.Context(), &models.Event{
+		CampaignTargetID: ct.ID, Type: models.EventAttachmentOpen,
+		IP: clientIP(r), UserAgent: r.UserAgent(),
+	})
+	s.notifyEvent(c.ID, "attachment_open", t.Email)
 	if trainingURL := s.autoAssignTraining(r.Context(), c.ID, t.ID); trainingURL != "" {
 		http.Redirect(w, r, trainingURL, http.StatusFound)
 		return

@@ -161,6 +161,10 @@ filter deception. It is **not** a spam-filter evasion tool.
   SpamAssassin score, and HTML lint before you send.
 - **Reputation-friendly sending** — warm-up batching, per-send jitter, rate limits,
   and timezone-aware send windows.
+- **Realistic mail-client header** — optional `X-Mailer` per sending profile.
+- **Seed-list inbox placement test** — connects to a real seed mailbox over IMAP
+  and reports whether a marked test send landed in the inbox or spam/junk,
+  closing the loop instead of just checking DNS records.
 - **Coordinate an allowlist** with the client's mail gateway — for an authorized
   test this is the most reliable path to the inbox.
 
@@ -175,6 +179,38 @@ deleted** from the UI, GoPhish-style.
 The UI ships with a language selector on the login screen. **Turkish** is the
 default; English is included as a base and more languages can be added in
 `web/src/i18n.tsx`.
+
+## Bulk target import (Excel/CSV)
+
+Import a spreadsheet of targets on the engagement page — **.xlsx or .csv**, header
+row required. Column headers are matched flexibly (Turkish or English, any order):
+
+| Purpose | Accepted headers (case-insensitive) |
+|---|---|
+| Email (**required**) | `Email`, `E-posta`, `Mail`, `E-posta Adresi` |
+| Full name | `Ad Soyad`, `Isim`, `Full Name`, `Name` |
+| — or split — | `Ad`/`First Name` and `Soyad`/`Last Name` |
+| Department | `Departman`, `Department`, `Birim`, `Takım` |
+| Position | `Pozisyon`, `Position`, `Unvan`, `Görev` |
+| Timezone | `Saat Dilimi`, `Zaman Dilimi`, `Timezone` |
+| VIP flag | `VIP`, `Önemli` (values: `evet`/`yes`/`1`/`x`) |
+
+A "Download template (CSV)" button on the page gives a ready-made example. Rows
+outside the engagement's scope are rejected automatically; rows with an invalid
+email are reported back without stopping the rest of the import.
+
+## Red-team simulation features
+
+- **QR-code phishing (quishing)** — insert `<img src="{{.QRCodeURL}}">` in an
+  email template; scanning it is tracked as a distinct `scan` event before
+  following through to the normal click/landing flow.
+- **Simulated attachment opens** — insert `<a href="{{.AttachmentURL}}">Invoice.pdf</a>`;
+  "opening" it records an `attachment_open` event and routes to awareness
+  training. No file is ever executed or delivered.
+- **Department & VIP tagging** — target metadata surfaces in risk-score
+  reporting so you can see which teams (or executives) are most at risk.
+- **Full-screen preview** — every live preview (email, landing page, training
+  module) has an "open in a new tab" button to see exactly how it renders.
 
 ## Data capture (configurable per landing page)
 

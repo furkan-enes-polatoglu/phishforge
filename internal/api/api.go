@@ -68,6 +68,7 @@ func (s *Server) Router() http.Handler {
 			r.Delete("/engagements/{id}/scope/{ruleID}", s.requireRole("operator", s.handleDeleteScope))
 			r.Get("/engagements/{id}/targets", s.handleListTargets)
 			r.Post("/engagements/{id}/targets", s.requireRole("operator", s.handleCreateTargets))
+			r.Post("/engagements/{id}/targets/import", s.requireRole("operator", s.handleImportTargetsFile))
 			r.Get("/engagements/{id}/campaigns", s.handleListCampaigns)
 			r.Post("/engagements/{id}/campaigns", s.requireRole("operator", s.handleCreateCampaign))
 
@@ -116,6 +117,7 @@ func (s *Server) Router() http.Handler {
 			r.Delete("/webhooks/{id}", s.requireRole("operator", s.handleDeleteWebhook))
 
 			r.Post("/deliverability/check", s.requireRole("operator", s.handleDeliverabilityCheck))
+			r.Post("/deliverability/seed-check", s.requireRole("operator", s.handleSeedCheck))
 
 			r.Get("/audit-log", s.handleAuditLog)
 		})

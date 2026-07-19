@@ -207,6 +207,7 @@ type sendingProfileReq struct {
 	DKIMDomain   string `json:"dkim_domain"`
 	DKIMSelector string `json:"dkim_selector"`
 	SignDKIM     bool   `json:"sign_dkim"`
+	XMailer      string `json:"x_mailer"`
 }
 
 func (s *Server) handleCreateSendingProfile(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +228,7 @@ func (s *Server) handleCreateSendingProfile(w http.ResponseWriter, r *http.Reque
 		OrgID: p.OrgID, Name: req.Name, SMTPHost: req.SMTPHost, SMTPPort: req.SMTPPort,
 		Username: req.Username, Password: req.Password, FromAddress: req.FromAddress,
 		FromName: req.FromName, UseTLS: req.UseTLS,
-		DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector, SignDKIM: req.SignDKIM,
+		DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector, SignDKIM: req.SignDKIM, XMailer: req.XMailer,
 	}
 	if err := s.st.CreateSendingProfile(r.Context(), prof); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

@@ -174,7 +174,7 @@ func (s *Server) handleUpdateSendingProfile(w http.ResponseWriter, r *http.Reque
 		ID: id, OrgID: p.OrgID, Name: req.Name, SMTPHost: req.SMTPHost, SMTPPort: req.SMTPPort,
 		Username: req.Username, Password: req.Password, FromAddress: req.FromAddress, FromName: req.FromName,
 		UseTLS: req.UseTLS, DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector,
-		DKIMPrivateKey: existing.DKIMPrivateKey, SignDKIM: req.SignDKIM,
+		DKIMPrivateKey: existing.DKIMPrivateKey, SignDKIM: req.SignDKIM, XMailer: req.XMailer,
 	}
 	// Keep the existing password/DKIM key if the update leaves them blank.
 	if req.Password == "" {

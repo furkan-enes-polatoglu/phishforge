@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
+import { openHtmlInNewTab } from "../utils";
 
 type Tab = "email" | "landing" | "profiles";
 
@@ -28,8 +29,13 @@ function Preview({ html }: { html: string }) {
   const { t } = useI18n();
   return (
     <div>
-      <div className="label">{t("live_preview")}</div>
-      <iframe title="preview" srcDoc={html} className="h-64 w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
+      <div className="mb-1 flex items-center justify-between">
+        <div className="label !mb-0">{t("live_preview")}</div>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => openHtmlInNewTab(html)}>
+          ↗ {t("open_full_tab")}
+        </button>
+      </div>
+      <iframe title="preview" srcDoc={html} className="h-[36rem] w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
     </div>
   );
 }
@@ -68,7 +74,13 @@ function EmailTemplates() {
     <div className="grid gap-6 lg:grid-cols-2">
       <form onSubmit={save} className="card space-y-3">
         <div className="section-title">{editId ? t("edit") : t("new_module").replace("modülü", "şablon")} · {t("email_template")}</div>
-        <p className="text-xs muted">{t("merge_tags")}: {"{{.FirstName}} {{.TrackURL}} {{.TrackPixel}} {{.ReportURL}}"}</p>
+        <p className="text-xs muted">{t("merge_tags")}: {"{{.FirstName}} {{.Department}} {{.TrackURL}} {{.TrackPixel}} {{.ReportURL}}"}</p>
+        <p className="text-xs muted">
+          {t("qr_insert_hint")}<code>{'<img src="{{.QRCodeURL}}" width="140">'}</code>
+        </p>
+        <p className="text-xs muted">
+          {t("attachment_insert_hint")}<code>{'<a href="{{.AttachmentURL}}">Fatura.pdf</a>'}</code>
+        </p>
         <input className="input" placeholder={t("name")} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
         <input className="input" placeholder={t("subject")} value={f.subject} onChange={(e) => setF({ ...f, subject: e.target.value })} required />
         <textarea className="input h-40 font-mono text-xs" value={f.html} onChange={(e) => setF({ ...f, html: e.target.value })} />
@@ -181,7 +193,7 @@ function LandingPages() {
 function SendingProfiles() {
   const { t } = useI18n();
   const [list, setList] = useState<any[]>([]);
-  const empty = { name: "", smtp_host: "", smtp_port: 587, username: "", password: "", from_address: "", from_name: "", use_tls: true, dkim_domain: "", dkim_selector: "", sign_dkim: false };
+  const empty = { name: "", smtp_host: "", smtp_port: 587, username: "", password: "", from_address: "", from_name: "", use_tls: true, dkim_domain: "", dkim_selector: "", sign_dkim: false, x_mailer: "" };
   const [f, setF] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -196,7 +208,7 @@ function SendingProfiles() {
       setF(empty); setEditId(null); setMsg(t("saved")); load();
     } catch (e: any) { setMsg(e.message); }
   }
-  function edit(x: any) { setEditId(x.id); setDkim(null); setF({ name: x.name, smtp_host: x.smtp_host, smtp_port: x.smtp_port, username: x.username, password: "", from_address: x.from_address, from_name: x.from_name, use_tls: x.use_tls, dkim_domain: x.dkim_domain || "", dkim_selector: x.dkim_selector || "", sign_dkim: x.sign_dkim }); }
+  function edit(x: any) { setEditId(x.id); setDkim(null); setF({ name: x.name, smtp_host: x.smtp_host, smtp_port: x.smtp_port, username: x.username, password: "", from_address: x.from_address, from_name: x.from_name, use_tls: x.use_tls, dkim_domain: x.dkim_domain || "", dkim_selector: x.dkim_selector || "", sign_dkim: x.sign_dkim, x_mailer: x.x_mailer || "" }); }
   async function genDkim() {
     if (!editId) { setMsg("Önce profili kaydedin, sonra DKIM üretin."); return; }
     try { const r: any = await api(`sending-profiles/${editId}/dkim`, { method: "POST", body: { domain: f.dkim_domain, selector: f.dkim_selector } }); setDkim(r); setF({ ...f, sign_dkim: true }); load(); }
@@ -214,6 +226,11 @@ function SendingProfiles() {
         <input className="input" type="password" placeholder={t("password") + (editId ? " " + t("leave_blank_keep") : "")} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         <input className="input" placeholder={t("from_name")} value={f.from_name} onChange={(e) => setF({ ...f, from_name: e.target.value })} />
         <label className="checkbox-row"><input type="checkbox" checked={f.use_tls} onChange={(e) => setF({ ...f, use_tls: e.target.checked })} /> STARTTLS</label>
+        <div className="col-span-2">
+          <label className="label">{t("x_mailer")}</label>
+          <input className="input" placeholder="örn. Microsoft Outlook 16.0" value={f.x_mailer} onChange={(e) => setF({ ...f, x_mailer: e.target.value })} />
+          <p className="mt-1 text-xs muted">{t("x_mailer_help")}</p>
+        </div>
 
         <div className="col-span-2 rounded-lg border p-3" style={{ borderColor: "var(--pf-border)", background: "#fafbff" }}>
           <div className="mb-1 font-semibold text-sm">{t("dkim_signing")}</div>

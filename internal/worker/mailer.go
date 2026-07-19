@@ -33,6 +33,7 @@ type Message struct {
 	HTML        string
 	Text        string
 	Unsubscribe string // optional List-Unsubscribe URL
+	XMailer     string // optional realistic mail-client header (deliverability)
 }
 
 func domainOf(addr string) string {
@@ -57,6 +58,9 @@ func (m Message) Build() string {
 	b.WriteString("Subject: " + m.Subject + "\r\n")
 	b.WriteString("Date: " + time.Now().Format(time.RFC1123Z) + "\r\n")
 	b.WriteString("Message-ID: " + messageID(domainOf(m.From)) + "\r\n")
+	if m.XMailer != "" {
+		b.WriteString("X-Mailer: " + m.XMailer + "\r\n")
+	}
 	if m.Unsubscribe != "" {
 		b.WriteString("List-Unsubscribe: <" + m.Unsubscribe + ">\r\n")
 		b.WriteString("List-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n")

@@ -1,10 +1,12 @@
 package api
 
 import (
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/furkan-enes-polatoglu/phishforge/internal/importer"
 	"github.com/furkan-enes-polatoglu/phishforge/internal/models"
 	"github.com/furkan-enes-polatoglu/phishforge/internal/scope"
 )
@@ -191,11 +193,13 @@ func (s *Server) handleDeleteScope(w http.ResponseWriter, r *http.Request) {
 
 type createTargetsReq struct {
 	Targets []struct {
-		Email     string `json:"email"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Position  string `json:"position"`
-		Timezone  string `json:"timezone"`
+		Email      string `json:"email"`
+		FirstName  string `json:"first_name"`
+		LastName   string `json:"last_name"`
+		Position   string `json:"position"`
+		Department string `json:"department"`
+		IsVIP      bool   `json:"is_vip"`
+		Timezone   string `json:"timezone"`
 	} `json:"targets"`
 }
 
@@ -234,7 +238,8 @@ func (s *Server) handleCreateTargets(w http.ResponseWriter, r *http.Request) {
 		}
 		t := &models.Target{
 			EngagementID: id, Email: email, FirstName: in.FirstName,
-			LastName: in.LastName, Position: in.Position, Timezone: tz,
+			LastName: in.LastName, Position: in.Position, Department: in.Department,
+			IsVIP: in.IsVIP, Timezone: tz,
 		}
 		if err := s.st.CreateTarget(r.Context(), t); err != nil {
 			rejected = append(rejected, email)
@@ -247,6 +252,71 @@ func (s *Server) handleCreateTargets(w http.ResponseWriter, r *http.Request) {
 			map[string]any{"count": len(rejected), "emails": rejected})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"created": created, "rejected_out_of_scope": rejected})
+}
+
+// handleImportTargetsFile accepts a multipart file upload (field name "file"),
+// a CSV or .xlsx spreadsheet of targets, parses it with flexible Turkish/English
+// header matching, and imports rows that fall within the engagement's scope.
+func (s *Server) handleImportTargetsFile(w http.ResponseWriter, r *http.Request) {
+	p := mustPrincipal(r)
+	id, ok := urlUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, err := s.st.GetEngagement(r.Context(), p.OrgID, id); err != nil {
+		writeError(w, http.StatusNotFound, "engagement not found")
+		return
+	}
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "dosya okunamadı (çok büyük veya bozuk form)")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, `"file" alanında bir dosya bekleniyor`)
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 10<<20))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "dosya okunamadı")
+		return
+	}
+
+	rows, parseErrs, err := importer.ParseFile(header.Filename, data)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	rules, _ := s.st.ListScopeRules(r.Context(), id)
+
+	created := []models.Target{}
+	rejected := []string{}
+	for _, row := range rows {
+		if !scope.Allowed(row.Email, rules) {
+			rejected = append(rejected, row.Email)
+			continue
+		}
+		tz := row.Timezone
+		if tz == "" {
+			tz = "UTC"
+		}
+		t := &models.Target{
+			EngagementID: id, Email: row.Email, FirstName: row.FirstName, LastName: row.LastName,
+			Position: row.Position, Department: row.Department, IsVIP: row.VIP, Timezone: tz,
+		}
+		if err := s.st.CreateTarget(r.Context(), t); err != nil {
+			rejected = append(rejected, row.Email)
+			continue
+		}
+		created = append(created, *t)
+	}
+	_ = s.st.Audit(r.Context(), p.OrgID, &p.UserID, "targets.import_file", "engagement", id.String(), map[string]any{
+		"filename": header.Filename, "created": len(created), "rejected": len(rejected), "parse_errors": len(parseErrs),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"created": created, "rejected_out_of_scope": rejected, "parse_errors": parseErrs,
+	})
 }
 
 func (s *Server) handleListTargets(w http.ResponseWriter, r *http.Request) {

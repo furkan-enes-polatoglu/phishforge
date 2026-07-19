@@ -12,13 +12,16 @@ import (
 
 // TemplateData is exposed to email templates via merge-tags, e.g. {{.FirstName}}.
 type TemplateData struct {
-	FirstName  string
-	LastName   string
-	Email      string
-	Position   string
-	TrackURL   string // click-through landing URL
-	TrackPixel string // open tracking pixel URL
-	ReportURL  string // "report phishing" URL
+	FirstName     string
+	LastName      string
+	Email         string
+	Position      string
+	Department    string
+	TrackURL      string // click-through landing URL
+	TrackPixel    string // open tracking pixel URL
+	ReportURL     string // "report phishing" URL
+	QRCodeURL     string // PNG image of a QR code encoding a scan-tracked link (quishing simulation)
+	AttachmentURL string // simulated malicious-attachment link (records an "attachment_open" event)
 }
 
 // Render substitutes merge-tags in an email body. Uses html/template so target
@@ -55,13 +58,17 @@ func RewriteLinks(html, trackURL string) string {
 }
 
 func buildData(t models.Target, phishBase, rid string) TemplateData {
+	escRID := url.PathEscape(rid)
 	return TemplateData{
-		FirstName:  t.FirstName,
-		LastName:   t.LastName,
-		Email:      t.Email,
-		Position:   t.Position,
-		TrackURL:   phishBase + "/l/" + url.PathEscape(rid),
-		TrackPixel: phishBase + "/t/" + url.PathEscape(rid),
-		ReportURL:  phishBase + "/r/" + url.PathEscape(rid),
+		FirstName:     t.FirstName,
+		LastName:      t.LastName,
+		Email:         t.Email,
+		Position:      t.Position,
+		Department:    t.Department,
+		TrackURL:      phishBase + "/l/" + escRID,
+		TrackPixel:    phishBase + "/t/" + escRID,
+		ReportURL:     phishBase + "/r/" + escRID,
+		QRCodeURL:     phishBase + "/qr/" + escRID,
+		AttachmentURL: phishBase + "/a/" + escRID,
 	}
 }

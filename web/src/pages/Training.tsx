@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useI18n } from "../i18n";
+import { openHtmlInNewTab } from "../utils";
 
 export default function Training() {
   const { t } = useI18n();
@@ -49,8 +50,13 @@ export default function Training() {
         </form>
         <div className="space-y-4">
           <div>
-            <div className="label">{t("preview")}</div>
-            <iframe title="training-preview" srcDoc={f.html} className="h-56 w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
+            <div className="mb-1 flex items-center justify-between">
+              <div className="label !mb-0">{t("preview")}</div>
+              <button type="button" className="btn-ghost btn-sm" onClick={() => openHtmlInNewTab(f.html)}>
+                ↗ {t("open_full_tab")}
+              </button>
+            </div>
+            <iframe title="training-preview" srcDoc={f.html} className="h-[32rem] w-full rounded-lg border bg-white" style={{ borderColor: "var(--pf-border)" }} />
           </div>
           <div className="card">
             <div className="section-title mb-2">{t("modules")} ({modules.length})</div>

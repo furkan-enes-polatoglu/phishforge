@@ -105,8 +105,12 @@ export default function CampaignReport() {
 }
 
 function EventBadge({ type }: { type: string }) {
-  const cls: Record<string, string> = { sent: "badge-gray", open: "badge-blue", click: "badge-amber", submit: "badge-red", report: "badge-green" };
-  return <span className={`badge ${cls[type] || "badge-gray"}`}>{type}</span>;
+  const { t } = useI18n();
+  const cls: Record<string, string> = {
+    sent: "badge-gray", open: "badge-blue", click: "badge-amber", submit: "badge-red",
+    report: "badge-green", scan: "badge-blue", attachment_open: "badge-red",
+  };
+  return <span className={`badge ${cls[type] || "badge-gray"}`}>{t(`event_${type}`)}</span>;
 }
 
 function renderCaptured(meta: any) {

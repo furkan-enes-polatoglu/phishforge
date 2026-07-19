@@ -335,7 +335,7 @@ func (s *Store) OrgIDForCampaign(ctx context.Context, campaignID uuid.UUID) (uui
 // score = clicks*3 + submits*5 - reports*2, clamped at 0. Higher = riskier.
 func (s *Store) RiskScores(ctx context.Context, engagementID uuid.UUID) ([]map[string]any, error) {
 	rows, err := s.pool.Query(ctx,
-		`SELECT t.email, t.position,
+		`SELECT t.email, t.position, t.department, t.is_vip,
 		        count(*) FILTER (WHERE ev.type='open')   AS opens,
 		        count(*) FILTER (WHERE ev.type='click')  AS clicks,
 		        count(*) FILTER (WHERE ev.type='submit') AS submits,
@@ -344,7 +344,7 @@ func (s *Store) RiskScores(ctx context.Context, engagementID uuid.UUID) ([]map[s
 		 LEFT JOIN campaign_targets ct ON ct.target_id=t.id
 		 LEFT JOIN events ev ON ev.campaign_target_id=ct.id
 		 WHERE t.engagement_id=$1
-		 GROUP BY t.email, t.position
+		 GROUP BY t.email, t.position, t.department, t.is_vip
 		 ORDER BY (count(*) FILTER (WHERE ev.type='click'))*3
 		        + (count(*) FILTER (WHERE ev.type='submit'))*5 DESC, t.email`, engagementID)
 	if err != nil {
@@ -353,9 +353,10 @@ func (s *Store) RiskScores(ctx context.Context, engagementID uuid.UUID) ([]map[s
 	defer rows.Close()
 	out := []map[string]any{}
 	for rows.Next() {
-		var email, position string
+		var email, position, department string
+		var isVIP bool
 		var opens, clicks, submits, reports int
-		if err := rows.Scan(&email, &position, &opens, &clicks, &submits, &reports); err != nil {
+		if err := rows.Scan(&email, &position, &department, &isVIP, &opens, &clicks, &submits, &reports); err != nil {
 			return nil, err
 		}
 		score := clicks*3 + submits*5 - reports*2
@@ -369,8 +370,9 @@ func (s *Store) RiskScores(ctx context.Context, engagementID uuid.UUID) ([]map[s
 			level = "medium"
 		}
 		out = append(out, map[string]any{
-			"email": email, "position": position, "opens": opens, "clicks": clicks,
-			"submits": submits, "reports": reports, "score": score, "level": level,
+			"email": email, "position": position, "department": department, "is_vip": isVIP,
+			"opens": opens, "clicks": clicks, "submits": submits, "reports": reports,
+			"score": score, "level": level,
 		})
 	}
 	return out, rows.Err()
