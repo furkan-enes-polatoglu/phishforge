@@ -35,6 +35,11 @@ type Config struct {
 	// Deliverability
 	SpamdAddr string // host:port of a SpamAssassin spamd, empty = disabled
 
+	// Mailgun webhook signing key (account-level secret, separate from any
+	// per-profile API key) — verifies inbound delivered/bounced/complained
+	// webhook authenticity. Empty disables signature verification (dev only).
+	MailgunWebhookSigningKey string
+
 	// Worker
 	WorkerConcurrency int
 
@@ -77,25 +82,26 @@ func splitList(s string) []string {
 // Load builds a Config from the environment and validates required secrets.
 func Load() (*Config, error) {
 	c := &Config{
-		Mode:                   getenv("PHISHFORGE_MODE", "api"),
-		Environment:            getenv("PHISHFORGE_ENV", "dev"),
-		DatabaseURL:            getenv("DATABASE_URL", "postgres://phishforge:phishforge@localhost:5432/phishforge?sslmode=disable"),
-		RedisURL:               getenv("REDIS_URL", "redis://localhost:6379/0"),
-		AdminAddr:              getenv("ADMIN_ADDR", ":8080"),
-		PhishAddr:              getenv("PHISH_ADDR", ":8081"),
-		AdminBaseURL:           getenv("ADMIN_BASE_URL", "http://localhost:8080"),
-		PhishBaseURL:           getenv("PHISH_BASE_URL", "http://localhost:8081"),
-		JWTSecret:              []byte(getenv("JWT_SECRET", "")),
-		RIDSecret:              []byte(getenv("RID_SECRET", "")),
-		AccessTTL:              time.Duration(getenvInt("ACCESS_TTL_MIN", 30)) * time.Minute,
-		RefreshTTL:             time.Duration(getenvInt("REFRESH_TTL_HOURS", 168)) * time.Hour,
-		CORSOrigins:            splitList(getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8080")),
-		WebDist:                getenv("WEB_DIST", "./web/dist"),
-		SpamdAddr:              getenv("SPAMD_ADDR", ""),
-		WorkerConcurrency:      getenvInt("WORKER_CONCURRENCY", 4),
-		BootstrapAdminUsername: getenv("BOOTSTRAP_ADMIN_USERNAME", ""),
-		BootstrapAdminPass:     getenv("BOOTSTRAP_ADMIN_PASSWORD", ""),
-		BootstrapOrgName:       getenv("BOOTSTRAP_ORG_NAME", "Default Org"),
+		Mode:                     getenv("PHISHFORGE_MODE", "api"),
+		Environment:              getenv("PHISHFORGE_ENV", "dev"),
+		DatabaseURL:              getenv("DATABASE_URL", "postgres://phishforge:phishforge@localhost:5432/phishforge?sslmode=disable"),
+		RedisURL:                 getenv("REDIS_URL", "redis://localhost:6379/0"),
+		AdminAddr:                getenv("ADMIN_ADDR", ":8080"),
+		PhishAddr:                getenv("PHISH_ADDR", ":8081"),
+		AdminBaseURL:             getenv("ADMIN_BASE_URL", "http://localhost:8080"),
+		PhishBaseURL:             getenv("PHISH_BASE_URL", "http://localhost:8081"),
+		JWTSecret:                []byte(getenv("JWT_SECRET", "")),
+		RIDSecret:                []byte(getenv("RID_SECRET", "")),
+		AccessTTL:                time.Duration(getenvInt("ACCESS_TTL_MIN", 30)) * time.Minute,
+		RefreshTTL:               time.Duration(getenvInt("REFRESH_TTL_HOURS", 168)) * time.Hour,
+		CORSOrigins:              splitList(getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8080")),
+		WebDist:                  getenv("WEB_DIST", "./web/dist"),
+		SpamdAddr:                getenv("SPAMD_ADDR", ""),
+		MailgunWebhookSigningKey: getenv("MAILGUN_WEBHOOK_SIGNING_KEY", ""),
+		WorkerConcurrency:        getenvInt("WORKER_CONCURRENCY", 4),
+		BootstrapAdminUsername:   getenv("BOOTSTRAP_ADMIN_USERNAME", ""),
+		BootstrapAdminPass:       getenv("BOOTSTRAP_ADMIN_PASSWORD", ""),
+		BootstrapOrgName:         getenv("BOOTSTRAP_ORG_NAME", "Default Org"),
 	}
 
 	if len(c.JWTSecret) < 16 {

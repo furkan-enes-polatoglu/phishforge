@@ -170,15 +170,22 @@ func (s *Server) handleUpdateSendingProfile(w http.ResponseWriter, r *http.Reque
 	if req.SMTPPort == 0 {
 		req.SMTPPort = 587
 	}
+	if req.Provider == "" {
+		req.Provider = "smtp"
+	}
 	prof := &models.SendingProfile{
-		ID: id, OrgID: p.OrgID, Name: req.Name, SMTPHost: req.SMTPHost, SMTPPort: req.SMTPPort,
+		ID: id, OrgID: p.OrgID, Name: req.Name, Provider: req.Provider, SMTPHost: req.SMTPHost, SMTPPort: req.SMTPPort,
 		Username: req.Username, Password: req.Password, FromAddress: req.FromAddress, FromName: req.FromName,
 		UseTLS: req.UseTLS, DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector,
 		DKIMPrivateKey: existing.DKIMPrivateKey, SignDKIM: req.SignDKIM, XMailer: req.XMailer,
+		MailgunAPIKey: req.MailgunAPIKey, MailgunDomain: req.MailgunDomain,
 	}
-	// Keep the existing password/DKIM key if the update leaves them blank.
+	// Keep the existing password/DKIM key/Mailgun API key if the update leaves them blank.
 	if req.Password == "" {
 		prof.Password = existing.Password
+	}
+	if req.MailgunAPIKey == "" {
+		prof.MailgunAPIKey = existing.MailgunAPIKey
 	}
 	if err := s.st.UpdateSendingProfile(r.Context(), p.OrgID, prof); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

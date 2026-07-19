@@ -24,16 +24,27 @@ func messageID(domain string) string {
 	return "<" + hex.EncodeToString(b) + "@" + domain + ">"
 }
 
-// Message is a single outbound email.
+// Message is a single outbound email. From/FromName are the technically
+// authenticated sender (used for the envelope MAIL FROM, DKIM signing domain,
+// and Message-ID host) — these must stay the sending profile's own address for
+// SPF/DKIM to have any chance of aligning. HeaderFrom/HeaderFromName optionally
+// override what's DISPLAYED in the visible "From:" line, decoupled from the
+// technical sender — this is how pretext realism (appearing as an exact real
+// address) is supported without lying about the technical sending identity.
+// When the two differ, DMARC alignment will fail at the target unless the
+// sending infrastructure is allowlisted (see the gateway-detection feature).
 type Message struct {
-	From        string
-	FromName    string
-	To          string
-	Subject     string
-	HTML        string
-	Text        string
-	Unsubscribe string // optional List-Unsubscribe URL
-	XMailer     string // optional realistic mail-client header (deliverability)
+	From           string
+	FromName       string
+	HeaderFrom     string
+	HeaderFromName string
+	To             string
+	Subject        string
+	HTML           string
+	Text           string
+	Unsubscribe    string // optional List-Unsubscribe URL
+	XMailer        string // optional realistic mail-client header (deliverability)
+	ReplyTo        string // optional Reply-To, independent of the display From
 }
 
 func domainOf(addr string) string {
@@ -48,9 +59,13 @@ func domainOf(addr string) string {
 // optional List-Unsubscribe) — these improve deliverability for authorized senders.
 func (m Message) Build() string {
 	var b strings.Builder
-	from := m.From
-	if m.FromName != "" {
-		from = fmt.Sprintf("%s <%s>", m.FromName, m.From)
+	displayAddr, displayName := m.From, m.FromName
+	if m.HeaderFrom != "" {
+		displayAddr, displayName = m.HeaderFrom, m.HeaderFromName
+	}
+	from := displayAddr
+	if displayName != "" {
+		from = fmt.Sprintf("%s <%s>", displayName, displayAddr)
 	}
 	boundary := "phishforge-boundary-42"
 	b.WriteString("From: " + from + "\r\n")
@@ -58,6 +73,9 @@ func (m Message) Build() string {
 	b.WriteString("Subject: " + m.Subject + "\r\n")
 	b.WriteString("Date: " + time.Now().Format(time.RFC1123Z) + "\r\n")
 	b.WriteString("Message-ID: " + messageID(domainOf(m.From)) + "\r\n")
+	if m.ReplyTo != "" {
+		b.WriteString("Reply-To: " + m.ReplyTo + "\r\n")
+	}
 	if m.XMailer != "" {
 		b.WriteString("X-Mailer: " + m.XMailer + "\r\n")
 	}

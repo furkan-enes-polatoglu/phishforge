@@ -319,6 +319,36 @@ func (s *Store) WebhooksForEvent(ctx context.Context, orgID uuid.UUID, event str
 	return out, nil
 }
 
+// CampaignIDForCampaignTarget resolves the campaign a campaign_target belongs
+// to — used to correlate an inbound ESP webhook event (keyed by
+// campaign_target_id) back to its campaign for reputation-safety checks.
+func (s *Store) CampaignIDForCampaignTarget(ctx context.Context, campaignTargetID uuid.UUID) (uuid.UUID, error) {
+	var campaignID uuid.UUID
+	err := s.pool.QueryRow(ctx,
+		`SELECT campaign_id FROM campaign_targets WHERE id=$1`, campaignTargetID,
+	).Scan(&campaignID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, ErrNotFound
+	}
+	return campaignID, err
+}
+
+// BounceComplaintStats returns the sent/bounced/complained counts for a
+// campaign, used to decide whether reputation is at risk and the campaign
+// should be auto-paused.
+func (s *Store) BounceComplaintStats(ctx context.Context, campaignID uuid.UUID) (sent, bounced, complained int, err error) {
+	err = s.pool.QueryRow(ctx,
+		`SELECT
+		   count(DISTINCT ct.id) FILTER (WHERE ev.type='sent'),
+		   count(DISTINCT ct.id) FILTER (WHERE ev.type='bounced'),
+		   count(DISTINCT ct.id) FILTER (WHERE ev.type='complained')
+		 FROM campaign_targets ct
+		 LEFT JOIN events ev ON ev.campaign_target_id=ct.id
+		 WHERE ct.campaign_id=$1`, campaignID,
+	).Scan(&sent, &bounced, &complained)
+	return
+}
+
 // OrgIDForCampaign resolves the owning org of a campaign (used by the phishing server).
 func (s *Store) OrgIDForCampaign(ctx context.Context, campaignID uuid.UUID) (uuid.UUID, error) {
 	var orgID uuid.UUID

@@ -196,18 +196,21 @@ func injectBaseHref(html, origin string) string {
 // ---- Sending profiles ----
 
 type sendingProfileReq struct {
-	Name         string `json:"name"`
-	SMTPHost     string `json:"smtp_host"`
-	SMTPPort     int    `json:"smtp_port"`
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	FromAddress  string `json:"from_address"`
-	FromName     string `json:"from_name"`
-	UseTLS       bool   `json:"use_tls"`
-	DKIMDomain   string `json:"dkim_domain"`
-	DKIMSelector string `json:"dkim_selector"`
-	SignDKIM     bool   `json:"sign_dkim"`
-	XMailer      string `json:"x_mailer"`
+	Name          string `json:"name"`
+	Provider      string `json:"provider"` // "smtp" (default) | "mailgun_api"
+	SMTPHost      string `json:"smtp_host"`
+	SMTPPort      int    `json:"smtp_port"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	FromAddress   string `json:"from_address"`
+	FromName      string `json:"from_name"`
+	UseTLS        bool   `json:"use_tls"`
+	DKIMDomain    string `json:"dkim_domain"`
+	DKIMSelector  string `json:"dkim_selector"`
+	SignDKIM      bool   `json:"sign_dkim"`
+	XMailer       string `json:"x_mailer"`
+	MailgunAPIKey string `json:"mailgun_api_key"`
+	MailgunDomain string `json:"mailgun_domain"`
 }
 
 func (s *Server) handleCreateSendingProfile(w http.ResponseWriter, r *http.Request) {
@@ -217,18 +220,31 @@ func (s *Server) handleCreateSendingProfile(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	if req.SMTPHost == "" || req.FromAddress == "" {
-		writeError(w, http.StatusBadRequest, "smtp_host and from_address required")
+	if req.Provider == "" {
+		req.Provider = "smtp"
+	}
+	if req.FromAddress == "" {
+		writeError(w, http.StatusBadRequest, "from_address required")
+		return
+	}
+	if req.Provider == "mailgun_api" {
+		if req.MailgunAPIKey == "" || req.MailgunDomain == "" {
+			writeError(w, http.StatusBadRequest, "mailgun_api_key and mailgun_domain required for the mailgun_api provider")
+			return
+		}
+	} else if req.SMTPHost == "" {
+		writeError(w, http.StatusBadRequest, "smtp_host required")
 		return
 	}
 	if req.SMTPPort == 0 {
 		req.SMTPPort = 587
 	}
 	prof := &models.SendingProfile{
-		OrgID: p.OrgID, Name: req.Name, SMTPHost: req.SMTPHost, SMTPPort: req.SMTPPort,
+		OrgID: p.OrgID, Name: req.Name, Provider: req.Provider, SMTPHost: req.SMTPHost, SMTPPort: req.SMTPPort,
 		Username: req.Username, Password: req.Password, FromAddress: req.FromAddress,
 		FromName: req.FromName, UseTLS: req.UseTLS,
 		DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector, SignDKIM: req.SignDKIM, XMailer: req.XMailer,
+		MailgunAPIKey: req.MailgunAPIKey, MailgunDomain: req.MailgunDomain,
 	}
 	if err := s.st.CreateSendingProfile(r.Context(), prof); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

@@ -25,6 +25,12 @@ type createCampaignReq struct {
 	JitterSeconds    int        `json:"jitter_seconds"`
 	WarmupBatch      int        `json:"warmup_batch"`
 	RewriteLinks     bool       `json:"rewrite_links"`
+	// Pretext realism (see models.Campaign doc comment): the visible From can
+	// show an exact real address, decoupled from the sending profile's own
+	// technically-authenticated domain used for SPF/DKIM.
+	SpoofedFromName    string `json:"spoofed_from_name"`
+	SpoofedFromAddress string `json:"spoofed_from_address"`
+	ReplyTo            string `json:"reply_to"`
 }
 
 func (s *Server) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +83,7 @@ func (s *Server) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 		SendWindowStart: req.SendWindowStart, SendWindowEnd: windowEnd,
 		BusinessDaysOnly: req.BusinessDaysOnly, JitterSeconds: req.JitterSeconds,
 		WarmupBatch: req.WarmupBatch, RewriteLinks: req.RewriteLinks,
+		SpoofedFromName: req.SpoofedFromName, SpoofedFromAddress: req.SpoofedFromAddress, ReplyTo: req.ReplyTo,
 	}
 	if err := s.st.CreateCampaign(r.Context(), c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

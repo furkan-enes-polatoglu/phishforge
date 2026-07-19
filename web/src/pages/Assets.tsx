@@ -202,7 +202,7 @@ function LandingPages() {
 function SendingProfiles() {
   const { t } = useI18n();
   const [list, setList] = useState<any[]>([]);
-  const empty = { name: "", smtp_host: "", smtp_port: 587, username: "", password: "", from_address: "", from_name: "", use_tls: true, dkim_domain: "", dkim_selector: "", sign_dkim: false, x_mailer: "" };
+  const empty = { name: "", provider: "smtp", smtp_host: "", smtp_port: 587, username: "", password: "", from_address: "", from_name: "", use_tls: true, dkim_domain: "", dkim_selector: "", sign_dkim: false, x_mailer: "", mailgun_api_key: "", mailgun_domain: "" };
   const [f, setF] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -217,7 +217,7 @@ function SendingProfiles() {
       setF(empty); setEditId(null); setMsg(t("saved")); load();
     } catch (e: any) { setMsg(e.message); }
   }
-  function edit(x: any) { setEditId(x.id); setDkim(null); setF({ name: x.name, smtp_host: x.smtp_host, smtp_port: x.smtp_port, username: x.username, password: "", from_address: x.from_address, from_name: x.from_name, use_tls: x.use_tls, dkim_domain: x.dkim_domain || "", dkim_selector: x.dkim_selector || "", sign_dkim: x.sign_dkim, x_mailer: x.x_mailer || "" }); }
+  function edit(x: any) { setEditId(x.id); setDkim(null); setF({ name: x.name, provider: x.provider || "smtp", smtp_host: x.smtp_host, smtp_port: x.smtp_port, username: x.username, password: "", from_address: x.from_address, from_name: x.from_name, use_tls: x.use_tls, dkim_domain: x.dkim_domain || "", dkim_selector: x.dkim_selector || "", sign_dkim: x.sign_dkim, x_mailer: x.x_mailer || "", mailgun_api_key: "", mailgun_domain: x.mailgun_domain || "" }); }
   async function genDkim() {
     if (!editId) { setMsg("Önce profili kaydedin, sonra DKIM üretin."); return; }
     try { const r: any = await api(`sending-profiles/${editId}/dkim`, { method: "POST", body: { domain: f.dkim_domain, selector: f.dkim_selector } }); setDkim(r); setF({ ...f, sign_dkim: true }); load(); }
@@ -229,12 +229,34 @@ function SendingProfiles() {
         <div className="col-span-2 section-title">{editId ? t("edit") : t("sending_profile")}</div>
         <input className="input" placeholder={t("name")} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required />
         <input className="input" placeholder={t("from_address")} value={f.from_address} onChange={(e) => setF({ ...f, from_address: e.target.value })} required />
-        <input className="input" placeholder={t("smtp_host")} value={f.smtp_host} onChange={(e) => setF({ ...f, smtp_host: e.target.value })} required />
-        <input className="input" type="number" placeholder={t("port")} value={f.smtp_port} onChange={(e) => setF({ ...f, smtp_port: +e.target.value })} />
-        <input className="input" placeholder={t("username")} value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} />
-        <input className="input" type="password" placeholder={t("password") + (editId ? " " + t("leave_blank_keep") : "")} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         <input className="input" placeholder={t("from_name")} value={f.from_name} onChange={(e) => setF({ ...f, from_name: e.target.value })} />
-        <label className="checkbox-row"><input type="checkbox" checked={f.use_tls} onChange={(e) => setF({ ...f, use_tls: e.target.checked })} /> STARTTLS</label>
+
+        <div className="col-span-2">
+          <label className="label">{t("provider")}</label>
+          <select className="input" value={f.provider} onChange={(e) => setF({ ...f, provider: e.target.value })}>
+            <option value="smtp">{t("provider_smtp")}</option>
+            <option value="mailgun_api">{t("provider_mailgun_api")}</option>
+          </select>
+        </div>
+
+        {f.provider === "mailgun_api" ? (
+          <div className="col-span-2 rounded-lg border p-3" style={{ borderColor: "var(--pf-border)", background: "#fafbff" }}>
+            <p className="mb-2 text-xs muted">{t("mailgun_help")}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input className="input" placeholder={t("mailgun_domain") + " (mg.acme.com)"} value={f.mailgun_domain} onChange={(e) => setF({ ...f, mailgun_domain: e.target.value })} required />
+              <input className="input" type="password" placeholder={t("mailgun_api_key") + (editId ? " " + t("leave_blank_keep") : "")} value={f.mailgun_api_key} onChange={(e) => setF({ ...f, mailgun_api_key: e.target.value })} required={!editId} />
+            </div>
+          </div>
+        ) : (
+          <>
+            <input className="input" placeholder={t("smtp_host")} value={f.smtp_host} onChange={(e) => setF({ ...f, smtp_host: e.target.value })} required />
+            <input className="input" type="number" placeholder={t("port")} value={f.smtp_port} onChange={(e) => setF({ ...f, smtp_port: +e.target.value })} />
+            <input className="input" placeholder={t("username")} value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} />
+            <input className="input" type="password" placeholder={t("password") + (editId ? " " + t("leave_blank_keep") : "")} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
+            <label className="checkbox-row"><input type="checkbox" checked={f.use_tls} onChange={(e) => setF({ ...f, use_tls: e.target.checked })} /> STARTTLS</label>
+          </>
+        )}
+
         <div className="col-span-2">
           <label className="label">{t("x_mailer")}</label>
           <input className="input" placeholder="örn. Microsoft Outlook 16.0" value={f.x_mailer} onChange={(e) => setF({ ...f, x_mailer: e.target.value })} />
@@ -271,7 +293,7 @@ function SendingProfiles() {
           <tbody>
             {list.map((x) => (
               <tr key={x.id}>
-                <td>{x.name}<div className="muted text-xs">{x.from_address} {x.sign_dkim && <span className="badge badge-green">DKIM</span>}</div></td>
+                <td>{x.name}<div className="muted text-xs">{x.from_address} {x.provider === "mailgun_api" && <span className="badge badge-blue">Mailgun</span>} {x.sign_dkim && <span className="badge badge-green">DKIM</span>}</div></td>
                 <td className="text-right"><RowActions name={x.name} onEdit={() => edit(x)} onDup={() => api(`sending-profiles/${x.id}/duplicate`, { method: "POST" }).then(load)} onDel={() => api(`sending-profiles/${x.id}`, { method: "DELETE" }).then(load)} /></td>
               </tr>
             ))}

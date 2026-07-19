@@ -93,6 +93,7 @@ export default function EngagementDetail() {
     name: "", email_template_id: "", landing_page_id: "", sending_profile_id: "",
     rate_per_minute: 30, launch_at: "", send_window_start: 0, send_window_end: 24,
     business_days_only: false, jitter_seconds: 0, warmup_batch: 0, rewrite_links: true,
+    spoofed_from_name: "", spoofed_from_address: "", reply_to: "",
   });
   async function createCampaign(e: React.FormEvent) {
     e.preventDefault(); setMsg("");
@@ -207,6 +208,30 @@ export default function EngagementDetail() {
           <Field label={t("jitter")}><input className="input" type="number" min={0} value={camp.jitter_seconds} onChange={(e) => setCamp({ ...camp, jitter_seconds: +e.target.value })} /></Field>
           <label className="checkbox-row mt-6"><input type="checkbox" checked={camp.business_days_only} onChange={(e) => setCamp({ ...camp, business_days_only: e.target.checked })} /> {t("business_days")}</label>
           <label className="checkbox-row mt-6"><input type="checkbox" checked={camp.rewrite_links} onChange={(e) => setCamp({ ...camp, rewrite_links: e.target.checked })} /> {t("rewrite_links")}</label>
+
+          <div className="sm:col-span-3 rounded-lg border p-3" style={{ borderColor: "var(--pf-border)", background: "#fafbff" }}>
+            <div className="mb-1 font-semibold text-sm">{t("spoofed_from")}</div>
+            <p className="mb-2 text-xs muted">{t("spoofed_from_help")}</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <input className="input" placeholder={t("spoofed_from_name") + " (opsiyonel)"} value={camp.spoofed_from_name} onChange={(e) => setCamp({ ...camp, spoofed_from_name: e.target.value })} />
+              <input className="input" placeholder={t("spoofed_from_address") + " (opsiyonel)"} value={camp.spoofed_from_address} onChange={(e) => setCamp({ ...camp, spoofed_from_address: e.target.value })} />
+              <input className="input" placeholder={t("reply_to") + " (opsiyonel)"} value={camp.reply_to} onChange={(e) => setCamp({ ...camp, reply_to: e.target.value })} />
+            </div>
+            {(() => {
+              const profile = assets.profiles.find((p: any) => p.id === camp.sending_profile_id);
+              const spoofDomain = camp.spoofed_from_address.split("@")[1]?.toLowerCase();
+              const profDomain = profile?.from_address?.split("@")[1]?.toLowerCase();
+              if (spoofDomain && profDomain && spoofDomain !== profDomain) {
+                return (
+                  <p className="mt-2 rounded px-2 py-1 text-xs" style={{ background: "#fee2e2", color: "#991b1b" }}>
+                    ⚠ {spoofDomain} ≠ {profDomain} — DMARC hizalaması hedefte başarısız olur. Teslimat sayfasındaki "Hedef Mail Ağ Geçidi Tespiti" ile bu gönderim altyapısını beyaz listeye aldırın.
+                  </p>
+                );
+              }
+              return null;
+            })()}
+          </div>
+
           <div className="sm:col-span-3"><button className="btn">{t("create")}</button></div>
         </form>
 

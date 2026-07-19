@@ -74,6 +74,40 @@ This is **not** a spam-filter evasion tool — every technique here is legitimat
 email infrastructure, the same things a real ESP does to protect its sender
 reputation.
 
+## Mailgun integration (bounce/complaint feedback loop)
+
+Raw SMTP sending is fire-and-forget: a `250 OK` only means the relay *accepted*
+the message, not that it reached the inbox. PhishForge closes that loop for
+Mailgun specifically:
+
+- **Mailgun HTTP API sending** — a per-sending-profile provider option, using
+  Mailgun's officially recommended integration instead of SMTP AUTH relay.
+  Mailgun's own open/click tracking is disabled (`o:tracking=no`) so it never
+  rewrites links or injects its own pixel on top of PhishForge's tracking.
+- **Signed webhook receiver** (`/webhooks/mailgun`, HMAC-verified) ingests
+  `delivered` / `failed` (bounce) / `complained` events in real time, matched
+  back to the exact target via a custom variable — visible in the campaign
+  report as **delivered / bounced / complained** counts, not just "sent."
+- **Automatic reputation-safety pause** — if a campaign's complaint rate
+  exceeds 0.3% or bounce rate exceeds 5% (once at least 20 sends have a
+  result), PhishForge stops the campaign immediately and logs why. A burnt
+  sending domain silently damages every future engagement that reuses it;
+  this catches it while it's happening instead of after a report is read.
+- Raw SMTP profiles work too, including **Mailgun's own SMTP relay** — the
+  HTTP API path is simply the more thoroughly integrated option.
+
+## Pretext realism vs. authentication — the honest tradeoff
+
+A campaign can show an **exact real address** in the visible "From:" field
+(e.g. impersonating a real internal colleague or vendor), decoupled from the
+sending profile's own technically-authenticated domain used for SPF/DKIM.
+This is necessary for realistic pretexts, but it comes with a hard technical
+fact: **spoofing a domain you don't control can never pass SPF/DKIM/DMARC
+alignment** — only bypass filtering entirely. If the display address's domain
+differs from the sending profile's domain, PhishForge shows a warning and
+points you at the target gateway detection + allowlist playbook above — that
+allowlist is what actually makes this land, not authentication tricks.
+
 ## Red-team simulation techniques
 
 - **QR-code phishing (quishing)** — insert `<img src="{{.QRCodeURL}}">` in an
@@ -198,7 +232,7 @@ docker compose down -v              # stop and wipe all data
 5. **Build assets** — email template (merge-tags: `{{.FirstName}}`, `{{.TrackURL}}`,
    `{{.QRCodeURL}}`, `{{.AttachmentURL}}`, `{{.ReportURL}}`) and a landing page
    (form posts to `{{.SubmitURL}}`; capture behavior is configured per page).
-6. **Create a sending profile** — SMTP credentials, DKIM key generation, optional `X-Mailer`.
+6. **Create a sending profile** — SMTP or Mailgun API credentials, DKIM key generation, optional `X-Mailer`.
 7. **Run the deliverability check** — Delivery Confidence Score, and the
    target-gateway detection to get allowlisted before you send.
 8. **Create & launch a campaign** — the worker sends at your configured rate

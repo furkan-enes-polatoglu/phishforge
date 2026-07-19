@@ -48,6 +48,7 @@ func (s *Server) Router() http.Handler {
 	r.Get("/qr/{rid}", s.handleQRImage)   // PNG QR code embeddable in email
 	r.Get("/a/{rid}", s.handleAttachment) // simulated malicious attachment opened
 	r.Get("/training/{token}", s.handleTraining)
+	r.Post("/webhooks/mailgun", s.handleMailgunWebhook)
 	return r
 }
 

@@ -48,9 +48,9 @@ type User struct {
 type EngagementStatus string
 
 const (
-	EngagementDraft    EngagementStatus = "draft"
-	EngagementActive   EngagementStatus = "active"
-	EngagementClosed   EngagementStatus = "closed"
+	EngagementDraft  EngagementStatus = "draft"
+	EngagementActive EngagementStatus = "active"
+	EngagementClosed EngagementStatus = "closed"
 )
 
 // Engagement is the authorization record. Campaigns can only run inside an
@@ -97,7 +97,14 @@ type SendingProfile struct {
 	DKIMPrivateKey string `json:"-"` // never serialized
 	SignDKIM       bool   `json:"sign_dkim"`
 	XMailer        string `json:"x_mailer"` // realistic mail-client header, e.g. "Microsoft Outlook 16.0"
-	CreatedAt      time.Time `json:"created_at"`
+	// Provider selects the send path: "smtp" (raw SMTP relay, works with any
+	// server including Mailgun's SMTP relay) or "mailgun_api" (Mailgun's HTTP
+	// API — the officially recommended integration: better delivery feedback,
+	// tagging, and no SMTP-timeout risk).
+	Provider      string    `json:"provider"`
+	MailgunAPIKey string    `json:"-"` // never serialized
+	MailgunDomain string    `json:"mailgun_domain"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Target struct {
@@ -125,15 +132,15 @@ type EmailTemplate struct {
 }
 
 type LandingPage struct {
-	ID   uuid.UUID `json:"id"`
+	ID    uuid.UUID `json:"id"`
 	OrgID uuid.UUID `json:"org_id"`
-	Name string    `json:"name"`
-	HTML string    `json:"html"`
+	Name  string    `json:"name"`
+	HTML  string    `json:"html"`
 	// Capture controls (GoPhish-parity, explicit opt-in):
-	CaptureMeta          bool `json:"capture_meta"`           // capture which field NAMES were filled (never values)
-	CaptureSubmittedData bool `json:"capture_submitted_data"` // capture submitted field values
-	CapturePasswords     bool `json:"capture_passwords"`      // also capture password-like values (sensitive)
-	RedirectURL          string    `json:"redirect_url"`      // awareness training page
+	CaptureMeta          bool      `json:"capture_meta"`           // capture which field NAMES were filled (never values)
+	CaptureSubmittedData bool      `json:"capture_submitted_data"` // capture submitted field values
+	CapturePasswords     bool      `json:"capture_passwords"`      // also capture password-like values (sensitive)
+	RedirectURL          string    `json:"redirect_url"`           // awareness training page
 	CreatedAt            time.Time `json:"created_at"`
 }
 
@@ -164,7 +171,17 @@ type Campaign struct {
 	JitterSeconds    int  `json:"jitter_seconds"`     // random extra delay per send
 	WarmupBatch      int  `json:"warmup_batch"`       // max sends per scheduler cycle (0 = unlimited)
 	RewriteLinks     bool `json:"rewrite_links"`      // auto-rewrite anchors to tracked links
-	CreatedAt        time.Time `json:"created_at"`
+	// Pretext realism, decoupled from the technically-authenticated sending
+	// domain: the visible From header can show an exact real address for
+	// realism, while SPF/DKIM still authenticate as the sending profile's own
+	// domain. If the two domains differ, DMARC alignment WILL fail at the
+	// target unless the sending infrastructure is allowlisted (see the target
+	// gateway detection + playbook feature) — spoofing a domain you don't
+	// control can never pass SPF/DKIM alignment, only bypass filtering entirely.
+	SpoofedFromName    string    `json:"spoofed_from_name"`
+	SpoofedFromAddress string    `json:"spoofed_from_address"`
+	ReplyTo            string    `json:"reply_to"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 // InSendWindow reports whether "now" (in the given location) is within the
@@ -246,6 +263,9 @@ const (
 	EventReport         EventType = "report"
 	EventScan           EventType = "scan"            // QR code (quishing) scanned
 	EventAttachmentOpen EventType = "attachment_open" // simulated malicious attachment opened
+	EventDelivered      EventType = "delivered"       // ESP-confirmed inbox handoff (webhook)
+	EventBounced        EventType = "bounced"         // hard/soft bounce reported by the ESP
+	EventComplained     EventType = "complained"      // recipient marked the message as spam
 )
 
 type Event struct {
@@ -259,14 +279,14 @@ type Event struct {
 }
 
 type AuditEntry struct {
-	ID        uuid.UUID `json:"id"`
-	OrgID     uuid.UUID `json:"org_id"`
+	ID        uuid.UUID  `json:"id"`
+	OrgID     uuid.UUID  `json:"org_id"`
 	ActorID   *uuid.UUID `json:"actor_id"`
-	Action    string    `json:"action"`
-	Entity    string    `json:"entity"`
-	EntityID  string    `json:"entity_id"`
-	Meta      string    `json:"meta"`
-	CreatedAt time.Time `json:"created_at"`
+	Action    string     `json:"action"`
+	Entity    string     `json:"entity"`
+	EntityID  string     `json:"entity_id"`
+	Meta      string     `json:"meta"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
 type Webhook struct {

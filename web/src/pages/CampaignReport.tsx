@@ -50,6 +50,18 @@ export default function CampaignReport() {
         <FunnelBars funnel={report.funnel} />
       </div>
 
+      {(report.funnel.delivered > 0 || report.funnel.bounced > 0 || report.funnel.complained > 0) && (
+        <div className="card">
+          <div className="section-title mb-2">{t("delivery_health")}</div>
+          <p className="mb-3 text-xs muted">{t("delivery_health_help")}</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="stat"><div className="stat-value" style={{ color: "#166534" }}>{report.funnel.delivered}</div><div className="stat-label">{t("event_delivered")}</div></div>
+            <div className="stat"><div className="stat-value" style={{ color: "#92400e" }}>{report.funnel.bounced}</div><div className="stat-label">{t("event_bounced")}</div></div>
+            <div className="stat"><div className="stat-value" style={{ color: "#991b1b" }}>{report.funnel.complained}</div><div className="stat-label">{t("event_complained")}</div></div>
+          </div>
+        </div>
+      )}
+
       {/* A/B variants */}
       <div className="card space-y-3">
         <div className="section-title">{t("ab_variants")}</div>
@@ -109,6 +121,7 @@ function EventBadge({ type }: { type: string }) {
   const cls: Record<string, string> = {
     sent: "badge-gray", open: "badge-blue", click: "badge-amber", submit: "badge-red",
     report: "badge-green", scan: "badge-blue", attachment_open: "badge-red",
+    delivered: "badge-green", bounced: "badge-amber", complained: "badge-red",
   };
   return <span className={`badge ${cls[type] || "badge-gray"}`}>{t(`event_${type}`)}</span>;
 }

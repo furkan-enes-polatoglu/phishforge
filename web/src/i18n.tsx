@@ -152,6 +152,23 @@ const dict: Record<string, { tr: string; en: string }> = {
   generate_dkim: { tr: "DKIM anahtarı üret", en: "Generate DKIM key" },
   dkim_dns_record: { tr: "Bu TXT kaydını DNS'e ekleyin:", en: "Add this TXT record to DNS:" },
   sign_with_dkim: { tr: "Gönderimleri DKIM ile imzala", en: "Sign messages with DKIM" },
+  provider: { tr: "Gönderim yöntemi", en: "Sending method" },
+  provider_smtp: { tr: "SMTP (herhangi bir sunucu, Mailgun SMTP dahil)", en: "SMTP (any server, including Mailgun's SMTP relay)" },
+  provider_mailgun_api: { tr: "Mailgun HTTP API (önerilen)", en: "Mailgun HTTP API (recommended)" },
+  mailgun_api_key: { tr: "Mailgun API anahtarı", en: "Mailgun API key" },
+  mailgun_domain: { tr: "Mailgun alan adı", en: "Mailgun domain" },
+  mailgun_help: {
+    tr: "Mailgun'un resmi olarak önerdiği entegrasyon yöntemi: ham SMTP'ye göre daha güvenilir, gerçek teslimat geri bildirimi (delivered/bounced/complained) alır. Kendi tıklama/açılma takibimizle çakışmaması için Mailgun'un kendi tracking'i otomatik kapatılır.",
+    en: "Mailgun's officially recommended integration: more reliable than raw SMTP, gets real delivery feedback (delivered/bounced/complained). Mailgun's own tracking is disabled automatically so it doesn't conflict with ours.",
+  },
+  spoofed_from: { tr: "Görünen gönderen (pretext)", en: "Display sender (pretext)" },
+  spoofed_from_help: {
+    tr: "Gerçek bir e-posta adresini birebir görünen \"Kimden\" alanında gösterebilirsiniz. Teknik gönderim (SPF/DKIM) her zaman gönderim profilinin kendi alan adında kalır. Görünen adres farklı bir alan adındaysa DMARC hizalaması hedefte BAŞARISIZ olur — güvenilir teslimat için Teslimat sayfasındaki \"Hedef Mail Ağ Geçidi Tespiti\" ile bu gönderim altyapısını beyaz listeye aldırmanız gerekir.",
+    en: "Show an exact real address in the visible \"From\" field. Technical sending (SPF/DKIM) always stays the sending profile's own domain. If the display address is on a different domain, DMARC alignment WILL fail at the target — for reliable delivery, allowlist this sending infrastructure via \"Target Mail Gateway Detection\" on the Deliverability page.",
+  },
+  spoofed_from_name: { tr: "Görünen gönderen adı", en: "Display sender name" },
+  spoofed_from_address: { tr: "Görünen gönderen adresi", en: "Display sender address" },
+  reply_to: { tr: "Yanıt adresi (Reply-To)", en: "Reply-To address" },
 
   // training
   training_title: { tr: "Güvenlik farkındalık eğitimi", en: "Security awareness training" },
@@ -255,6 +272,14 @@ const dict: Record<string, { tr: string; en: string }> = {
   event_report: { tr: "bildirildi", en: "reported" },
   event_scan: { tr: "QR tarandı", en: "QR scanned" },
   event_attachment_open: { tr: "ek açıldı", en: "attachment opened" },
+  event_delivered: { tr: "teslim edildi", en: "delivered" },
+  event_bounced: { tr: "geri döndü (bounce)", en: "bounced" },
+  event_complained: { tr: "spam olarak işaretlendi", en: "complained" },
+  delivery_health: { tr: "Teslimat sağlığı (ESP geri bildirimi)", en: "Delivery health (ESP feedback)" },
+  delivery_health_help: {
+    tr: "Mailgun webhook'ları üzerinden gelen gerçek teslimat sonuçları. Yüksek bounce/complaint oranında kampanya otomatik olarak durdurulur (domain itibarını korumak için).",
+    en: "Real delivery outcomes reported via Mailgun webhooks. Campaigns are auto-paused on a high bounce/complaint rate to protect domain reputation.",
+  },
 };
 
 interface I18nCtx {
