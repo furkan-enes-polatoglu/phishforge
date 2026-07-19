@@ -152,6 +152,45 @@ docker compose down -v              # stop and wipe all data
 PhishForge maximizes inbox placement through **correct email infrastructure**, not
 filter deception. It is **not** a spam-filter evasion tool.
 
+### 🎯 Target mail gateway detection + allowlist playbook (headline feature)
+
+The single highest-leverage action for guaranteed inbox delivery in an
+authorized test is getting the sending infrastructure **explicitly allowlisted
+in the exact product standing in front of the target mailbox**. Every gateway
+calls this something different and buries it in a different console — so
+PhishForge automates the reconnaissance and the request:
+
+1. Enter the target company's domain — PhishForge resolves its MX records and
+   fingerprints the gateway (Microsoft 365/EOP, Google Workspace, Proofpoint,
+   Mimecast, Barracuda, or Cisco Secure Email/IronPort).
+2. It returns the exact console path and steps to allowlist a sender in *that*
+   product (e.g. M365's "Advanced Delivery → Phishing simulation" — a feature
+   Microsoft built specifically for third-party simulation tools).
+3. It generates a ready-to-send, filled-in request email for the client's
+   IT/security team, with a one-click copy button.
+
+Validated against live MX records: Salesforce/Atlassian → Proofpoint,
+Shopify/Stack Overflow → Google Workspace, GitHub → Microsoft 365.
+
+### Sender-side deliverability engine
+
+- **DKIM signing** — generate a per-sending-profile RSA keypair in the UI; PhishForge
+  publishes the DNS TXT record for you to add and signs every outbound message
+  (RFC 6376).
+- **PTR / Forward-Confirmed reverse DNS (FCrDNS)** — many corporate gateways
+  silently drop mail from IPs with no PTR record or a PTR that doesn't resolve
+  back to the same IP; this is checked automatically and is one of the most
+  commonly overlooked deliverability factors.
+- **MTA-STS / TLS-RPT** — checks whether the sending domain publishes a modern
+  transport-security policy, a positive trust signal to receiving gateways.
+- **DMARC alignment analysis** — parses `p=`/`sp=`/`aspf=`/`adkim=`/`rua=` and
+  warns about strict alignment requirements or monitoring-only policies.
+- **Parallel, expanded blocklist checks** — 5 major DNSBLs queried concurrently.
+- **Content / spam-trigger analysis** — flags classic Bayesian-filter trigger
+  phrases, link shorteners, ALL-CAPS shouting, and image-only bodies.
+- **Delivery Confidence Score** — every signal above rolled into one 0-100
+  score with a letter grade.
+
 - **DKIM signing** — generate a per-sending-profile RSA keypair in the UI; PhishForge
   publishes the DNS TXT record for you to add and signs every outbound message
   (RFC 6376). This is the single biggest legitimate deliverability win.

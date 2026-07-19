@@ -118,6 +118,7 @@ func (s *Server) Router() http.Handler {
 
 			r.Post("/deliverability/check", s.requireRole("operator", s.handleDeliverabilityCheck))
 			r.Post("/deliverability/seed-check", s.requireRole("operator", s.handleSeedCheck))
+			r.Post("/deliverability/gateway-check", s.requireRole("operator", s.handleGatewayCheck))
 
 			r.Get("/audit-log", s.handleAuditLog)
 		})

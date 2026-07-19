@@ -1,8 +1,10 @@
 // Package deliverability provides legitimate pre-send email health checks:
-// SPF/DKIM/DMARC record validation, RBL/blocklist lookups, an optional
-// SpamAssassin score, and HTML lint hints. The goal is to make authorized test
-// mail *reach the inbox* through correct email infrastructure and coordinated
-// allowlisting — NOT to evade or deceive spam filters.
+// SPF/DKIM/DMARC record validation and alignment analysis, PTR/FCrDNS,
+// MTA-STS/TLS-RPT, blocklist lookups, an optional SpamAssassin score, and
+// content/spam-trigger analysis — all aggregated into one delivery confidence
+// score. The goal is to make authorized test mail *reach the inbox* through
+// correct email infrastructure and coordinated allowlisting — NOT to evade or
+// deceive spam filters.
 package deliverability
 
 import (
@@ -10,22 +12,27 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// CheckResult is the outcome of a domain deliverability check.
+// CheckResult is the outcome of a full domain + sending-IP deliverability check.
 type CheckResult struct {
-	Domain    string        `json:"domain"`
-	SPF       RecordCheck   `json:"spf"`
-	DMARC     RecordCheck   `json:"dmarc"`
-	DKIM      RecordCheck   `json:"dkim"`
-	RBL       []RBLResult   `json:"rbl"`
-	SpamScore *float64      `json:"spam_score,omitempty"`
-	HTMLLint  []string      `json:"html_lint,omitempty"`
-	Advice    []string      `json:"advice"`
+	Domain    string       `json:"domain"`
+	SPF       RecordCheck  `json:"spf"`
+	DMARC     RecordCheck  `json:"dmarc"`
+	DMARCPolicy *DMARCPolicy `json:"dmarc_policy,omitempty"`
+	DKIM      RecordCheck  `json:"dkim"`
+	PTR       *PTRResult   `json:"ptr,omitempty"`
+	MTASTS    *MTASTSResult `json:"mta_sts,omitempty"`
+	TLSRPT    bool         `json:"tls_rpt"`
+	RBL       []RBLResult  `json:"rbl"`
+	SpamScore *float64     `json:"spam_score,omitempty"`
+	HTMLLint  []string     `json:"html_lint,omitempty"`
+	Content   *ContentAnalysis `json:"content,omitempty"`
+	Advice    []string     `json:"advice"`
+	Score     DeliveryScore `json:"score"`
 }
 
 type RecordCheck struct {
@@ -33,6 +40,17 @@ type RecordCheck struct {
 	Value  string `json:"value,omitempty"`
 	Status string `json:"status"` // ok | warn | missing
 	Detail string `json:"detail,omitempty"`
+}
+
+// DMARCPolicy is the parsed set of DMARC tags relevant to deliverability and
+// alignment (which determine whether SPF/DKIM passes actually count under DMARC).
+type DMARCPolicy struct {
+	Policy      string `json:"policy,omitempty"`     // p=
+	SubPolicy   string `json:"sub_policy,omitempty"`  // sp=
+	AlignSPF    string `json:"align_spf,omitempty"`   // aspf= (r=relaxed default, s=strict)
+	AlignDKIM   string `json:"align_dkim,omitempty"`  // adkim=
+	Percent     string `json:"percent,omitempty"`     // pct=
+	RUA         bool   `json:"has_rua"`               // aggregate reports configured
 }
 
 type RBLResult struct {
@@ -48,7 +66,37 @@ func lookupTXT(ctx context.Context, name string) ([]string, error) {
 	return resolver.LookupTXT(ctx, name)
 }
 
-// CheckDomain runs SPF/DMARC (and a best-effort DKIM selector probe) checks.
+// parseDMARCTags extracts DMARC tags (p=, sp=, aspf=, adkim=, pct=, rua=) from a
+// raw "v=DMARC1; p=reject; ..." TXT value.
+func parseDMARCTags(record string) DMARCPolicy {
+	pol := DMARCPolicy{AlignSPF: "r", AlignDKIM: "r"} // relaxed is the DMARC default
+	for _, part := range strings.Split(record, ";") {
+		part = strings.TrimSpace(part)
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		key, val := strings.ToLower(strings.TrimSpace(kv[0])), strings.TrimSpace(kv[1])
+		switch key {
+		case "p":
+			pol.Policy = val
+		case "sp":
+			pol.SubPolicy = val
+		case "aspf":
+			pol.AlignSPF = val
+		case "adkim":
+			pol.AlignDKIM = val
+		case "pct":
+			pol.Percent = val
+		case "rua":
+			pol.RUA = val != ""
+		}
+	}
+	return pol
+}
+
+// CheckDomain runs SPF/DMARC (with alignment-mode parsing) and a best-effort
+// DKIM selector probe for a sending domain.
 func CheckDomain(ctx context.Context, domain, dkimSelector string) CheckResult {
 	domain = strings.ToLower(strings.TrimSpace(domain))
 	res := CheckResult{Domain: domain}
@@ -60,7 +108,10 @@ func CheckDomain(ctx context.Context, domain, dkimSelector string) CheckResult {
 				res.SPF = RecordCheck{Found: true, Value: t, Status: "ok"}
 				if strings.Contains(t, "+all") {
 					res.SPF.Status = "warn"
-					res.SPF.Detail = "+all is dangerously permissive"
+					res.SPF.Detail = "+all aşırı derecede izin verici — spoofing'e açık kapı bırakır"
+				} else if !strings.Contains(t, "-all") && !strings.Contains(t, "~all") {
+					res.SPF.Status = "warn"
+					res.SPF.Detail = "kayıt bir 'all' mekanizmasıyla bitmiyor; -all (fail) önerilir"
 				}
 				break
 			}
@@ -68,7 +119,7 @@ func CheckDomain(ctx context.Context, domain, dkimSelector string) CheckResult {
 	}
 	if !res.SPF.Found {
 		res.SPF.Status = "missing"
-		res.Advice = append(res.Advice, "No SPF record: add v=spf1 including your sending host, then -all.")
+		res.Advice = append(res.Advice, "SPF kaydı yok: gönderim sunucunuzu içeren v=spf1 ... -all TXT kaydı ekleyin.")
 	}
 
 	// DMARC
@@ -76,13 +127,30 @@ func CheckDomain(ctx context.Context, domain, dkimSelector string) CheckResult {
 		for _, t := range txts {
 			if strings.HasPrefix(strings.ToLower(t), "v=dmarc1") {
 				res.DMARC = RecordCheck{Found: true, Value: t, Status: "ok"}
+				pol := parseDMARCTags(t)
+				res.DMARCPolicy = &pol
+				switch pol.Policy {
+				case "", "none":
+					res.DMARC.Status = "warn"
+					res.DMARC.Detail = "p=none: DMARC yalnızca izleme modunda, sahte gönderimler reddedilmiyor"
+				case "quarantine":
+					res.DMARC.Detail = "p=quarantine: hizalanmayan mesajlar spam'e düşürülür"
+				case "reject":
+					res.DMARC.Detail = "p=reject: hizalanmayan mesajlar tamamen reddedilir — SPF/DKIM hizalamasının doğru olduğundan emin olun"
+				}
+				if pol.AlignSPF == "s" || pol.AlignDKIM == "s" {
+					res.Advice = append(res.Advice, "DMARC katı (strict) hizalama kullanıyor: MAIL FROM / DKIM d= alan adının gönderen alan adıyla TAM olarak eşleşmesi gerekir.")
+				}
+				if !pol.RUA {
+					res.Advice = append(res.Advice, "DMARC'ta rua= (toplu rapor adresi) tanımlı değil; raporlama olmadan sahtecilik girişimlerini göremezsiniz.")
+				}
 				break
 			}
 		}
 	}
 	if !res.DMARC.Found {
 		res.DMARC.Status = "missing"
-		res.Advice = append(res.Advice, "No DMARC record: publish _dmarc TXT (start with p=none for monitoring).")
+		res.Advice = append(res.Advice, "DMARC kaydı yok: _dmarc TXT kaydı yayınlayın (izleme için p=none ile başlayabilirsiniz).")
 	}
 
 	// DKIM (probe a selector if provided)
@@ -96,81 +164,57 @@ func CheckDomain(ctx context.Context, domain, dkimSelector string) CheckResult {
 		}
 		if !res.DKIM.Found {
 			res.DKIM.Status = "missing"
-			res.Advice = append(res.Advice, fmt.Sprintf("DKIM selector %q not found; publish the public key TXT.", dkimSelector))
+			res.Advice = append(res.Advice, fmt.Sprintf("DKIM seçici %q bulunamadı; genel anahtar TXT kaydını yayınlayın.", dkimSelector))
 		}
 	} else {
 		res.DKIM.Status = "warn"
-		res.DKIM.Detail = "no selector provided to probe"
+		res.DKIM.Detail = "sorgulanacak bir seçici (selector) verilmedi"
 	}
 
 	if len(res.Advice) == 0 {
-		res.Advice = append(res.Advice, "Core authentication records look present. Coordinate an allowlist with the client's mail gateway for the engagement.")
+		res.Advice = append(res.Advice, "Temel kimlik doğrulama kayıtları mevcut görünüyor. Angajman için müşterinin mail gateway'inde bir izin listesi koordine edin.")
 	}
 	return res
 }
 
-// Common DNSBLs. RBL checks reverse the sender IP and query each zone.
+// defaultRBLs are well-established, widely-consulted DNSBLs. RBL checks reverse
+// the sending IP and query each zone concurrently (each with its own timeout so
+// one slow/unreachable list never blocks the others).
 var defaultRBLs = []string{
 	"zen.spamhaus.org",
 	"bl.spamcop.net",
 	"b.barracudacentral.org",
+	"dnsbl.sorbs.net",
+	"psbl.surriel.com",
 }
 
-// CheckIPReputation looks up an IPv4 address against common DNSBLs.
+// CheckIPReputation looks up an IPv4 address against common DNSBLs in parallel.
 func CheckIPReputation(ctx context.Context, ip string) []RBLResult {
 	parsed := net.ParseIP(ip).To4()
-	out := []RBLResult{}
 	if parsed == nil {
-		return out
+		return nil
 	}
 	rev := fmt.Sprintf("%d.%d.%d.%d", parsed[3], parsed[2], parsed[1], parsed[0])
-	for _, zone := range defaultRBLs {
-		q := rev + "." + zone
-		c, cancel := context.WithTimeout(ctx, 4*time.Second)
-		addrs, _ := resolver.LookupHost(c, q)
-		cancel()
-		out = append(out, RBLResult{List: zone, Listed: len(addrs) > 0})
+
+	type slot struct {
+		i   int
+		res RBLResult
+	}
+	ch := make(chan slot, len(defaultRBLs))
+	for i, zone := range defaultRBLs {
+		go func(i int, zone string) {
+			c, cancel := context.WithTimeout(ctx, 4*time.Second)
+			defer cancel()
+			addrs, _ := resolver.LookupHost(c, rev+"."+zone)
+			ch <- slot{i: i, res: RBLResult{List: zone, Listed: len(addrs) > 0}}
+		}(i, zone)
+	}
+	out := make([]RBLResult, len(defaultRBLs))
+	for range defaultRBLs {
+		s := <-ch
+		out[s.i] = s.res
 	}
 	return out
-}
-
-var (
-	reImgTag      = regexp.MustCompile(`(?i)<img[^>]*>`)
-	reHasAlt      = regexp.MustCompile(`(?i)\balt\s*=`)
-	reInlineStyle = regexp.MustCompile(`(?i)<link[^>]+stylesheet`)
-)
-
-// imgMissingAlt reports whether any <img> tag lacks an alt attribute. Go's RE2
-// engine has no lookahead, so we scan matched tags individually.
-func imgMissingAlt(html string) bool {
-	for _, tag := range reImgTag.FindAllString(html, -1) {
-		if !reHasAlt.MatchString(tag) {
-			return true
-		}
-	}
-	return false
-}
-
-// LintHTML returns non-fatal hints about markup that often hurts rendering or
-// deliverability (broken images, external stylesheets, missing text part hint).
-func LintHTML(html string) []string {
-	var hints []string
-	if strings.TrimSpace(html) == "" {
-		return []string{"empty HTML body"}
-	}
-	if imgMissingAlt(html) {
-		hints = append(hints, "some <img> tags lack alt text (accessibility + spam heuristics)")
-	}
-	if reInlineStyle.MatchString(html) {
-		hints = append(hints, "external stylesheet <link> found; many clients strip it — prefer inline styles")
-	}
-	if !strings.Contains(strings.ToLower(html), "unsubscribe") {
-		hints = append(hints, "no unsubscribe/footer text; consider a plausible footer for realism and policy")
-	}
-	if strings.Count(html, "!") > 8 {
-		hints = append(hints, "many exclamation marks; spammy-tone heuristics may trigger")
-	}
-	return hints
 }
 
 // SpamScore contacts a SpamAssassin spamd instance (CHECK) and returns the score.
