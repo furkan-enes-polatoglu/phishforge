@@ -1,8 +1,23 @@
 # 🎣 PhishForge
 
-An advanced, self-hostable **phishing-simulation & security-awareness** platform —
-a modern, more capable take on GoPhish. Built for **authorized** red-team and
-awareness engagements: measure user behavior, train people, and report results.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev)
+[![React](https://img.shields.io/badge/React-TS-61DAFB?logo=react)](https://react.dev)
+[![Docker](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker)](https://docs.docker.com/compose/)
+
+An advanced, self-hostable, **open-source phishing-simulation & security-awareness**
+platform — a modern, more capable take on GoPhish. Built for **authorized** red-team
+and awareness engagements: measure user behavior, train people, and report results.
+
+**One command to run it:**
+
+```bash
+git clone https://github.com/furkan-enes-polatoglu/phishforge.git
+cd phishforge && ./scripts/quickstart.sh
+```
+
+That's it — the script generates strong secrets, prints your admin login, and starts
+everything with Docker. Open <http://localhost:8080>. (Details below.)
 
 > ⚠️ **Authorized use only.** PhishForge is designed for engagements with **written
 > client authorization**. Authorization guardrails are first-class features: every
@@ -35,27 +50,54 @@ Architecture details: [`docs/architecture.md`](docs/architecture.md).
 - **Frontend:** React + TypeScript + Vite + Tailwind
 - **Database:** PostgreSQL 16 · **Queue/cache:** Redis 7
 
-## Quick start (Docker)
+## Requirements
+
+- **Docker** + the **Docker Compose v2** plugin. Nothing else — no Go or Node needed to run it.
+  Install Docker: <https://docs.docker.com/get-docker/>
+
+## Quick start (recommended)
 
 ```bash
-git clone <your-private-repo-url> phishforge && cd phishforge
+git clone https://github.com/furkan-enes-polatoglu/phishforge.git
+cd phishforge
+./scripts/quickstart.sh
+```
 
+The script:
+1. creates `.env` with strong random `JWT_SECRET` / `RID_SECRET`,
+2. generates and **prints your admin email + password**,
+3. builds the images and starts the whole stack.
+
+Then open **<http://localhost:8080>** and log in with the printed credentials.
+
+> Want to choose your own admin login? Set them before running:
+> `ADMIN_EMAIL="you@example.com" ADMIN_PASS="a-strong-password" ./scripts/quickstart.sh`
+
+## Manual start (if you prefer)
+
+```bash
 cp .env.example .env
-# Generate strong secrets and paste them into .env:
-make seed-secrets          # prints JWT_SECRET and RID_SECRET
-# Also set BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD in .env
-
+make seed-secrets          # prints JWT_SECRET and RID_SECRET to paste into .env
+# also set BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD in .env
 docker compose up -d --build
 ```
 
-Then open:
+Endpoints:
 
 - Admin UI + API: <http://localhost:8080>
 - Phishing / tracking server: <http://localhost:8081>
 - Health: <http://localhost:8080/healthz>
 
-Log in with the bootstrap admin credentials from your `.env`. The first run
-creates the org and admin automatically; migrations run on startup.
+The first run creates the org and admin automatically; migrations run on startup.
+
+## Manage it
+
+```bash
+docker compose logs -f api worker   # live logs
+docker compose ps                   # status
+docker compose down                 # stop (keeps data)
+docker compose down -v              # stop and wipe all data
+```
 
 ### Services
 
