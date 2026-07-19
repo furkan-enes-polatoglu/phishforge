@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/furkan-enes-polatoglu/phishforge/internal/dkim"
 	"github.com/furkan-enes-polatoglu/phishforge/internal/models"
@@ -175,6 +176,7 @@ func (s *Server) handleUpdateSendingProfile(w http.ResponseWriter, r *http.Reque
 		Username: req.Username, Password: req.Password, FromAddress: req.FromAddress, FromName: req.FromName,
 		UseTLS: req.UseTLS, DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector,
 		DKIMPrivateKey: existing.DKIMPrivateKey, SignDKIM: req.SignDKIM, XMailer: req.XMailer,
+		LandingBaseURL: strings.TrimRight(req.LandingBaseURL, "/"),
 	}
 	// Keep the existing password/DKIM key if the update leaves them blank.
 	if req.Password == "" {

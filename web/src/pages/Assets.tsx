@@ -202,7 +202,7 @@ function LandingPages() {
 function SendingProfiles() {
   const { t } = useI18n();
   const [list, setList] = useState<any[]>([]);
-  const empty = { name: "", smtp_host: "", smtp_port: 587, username: "", password: "", from_address: "", from_name: "", use_tls: true, dkim_domain: "", dkim_selector: "", sign_dkim: false, x_mailer: "" };
+  const empty = { name: "", smtp_host: "", smtp_port: 587, username: "", password: "", from_address: "", from_name: "", use_tls: true, dkim_domain: "", dkim_selector: "", sign_dkim: false, x_mailer: "", landing_base_url: "" };
   const [f, setF] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
@@ -217,7 +217,7 @@ function SendingProfiles() {
       setF(empty); setEditId(null); setMsg(t("saved")); load();
     } catch (e: any) { setMsg(e.message); }
   }
-  function edit(x: any) { setEditId(x.id); setDkim(null); setF({ name: x.name, smtp_host: x.smtp_host, smtp_port: x.smtp_port, username: x.username, password: "", from_address: x.from_address, from_name: x.from_name, use_tls: x.use_tls, dkim_domain: x.dkim_domain || "", dkim_selector: x.dkim_selector || "", sign_dkim: x.sign_dkim, x_mailer: x.x_mailer || "" }); }
+  function edit(x: any) { setEditId(x.id); setDkim(null); setF({ name: x.name, smtp_host: x.smtp_host, smtp_port: x.smtp_port, username: x.username, password: "", from_address: x.from_address, from_name: x.from_name, use_tls: x.use_tls, dkim_domain: x.dkim_domain || "", dkim_selector: x.dkim_selector || "", sign_dkim: x.sign_dkim, x_mailer: x.x_mailer || "", landing_base_url: x.landing_base_url || "" }); }
   async function genDkim() {
     if (!editId) { setMsg("Önce profili kaydedin, sonra DKIM üretin."); return; }
     try { const r: any = await api(`sending-profiles/${editId}/dkim`, { method: "POST", body: { domain: f.dkim_domain, selector: f.dkim_selector } }); setDkim(r); setF({ ...f, sign_dkim: true }); load(); }
@@ -240,6 +240,12 @@ function SendingProfiles() {
           <label className="label">{t("x_mailer")}</label>
           <input className="input" placeholder="örn. Microsoft Outlook 16.0" value={f.x_mailer} onChange={(e) => setF({ ...f, x_mailer: e.target.value })} />
           <p className="mt-1 text-xs muted">{t("x_mailer_help")}</p>
+        </div>
+
+        <div className="col-span-2">
+          <label className="label">{t("landing_base_url")}</label>
+          <input className="input" placeholder="https://portal.musteri-domaini.com" value={f.landing_base_url} onChange={(e) => setF({ ...f, landing_base_url: e.target.value })} />
+          <p className="mt-1 text-xs muted">{t("landing_base_url_help")}</p>
         </div>
 
         <div className="col-span-2 rounded-lg border p-3" style={{ borderColor: "var(--pf-border)", background: "#fafbff" }}>

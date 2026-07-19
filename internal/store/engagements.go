@@ -52,6 +52,24 @@ func (s *Store) GetEngagement(ctx context.Context, orgID, id uuid.UUID) (*models
 	return &e, nil
 }
 
+// GetEngagementByID fetches an engagement without tenant scoping. Used by the
+// target-facing phishing server, which authenticates via the signed RID rather
+// than an org-scoped principal (there is no logged-in user on that side).
+func (s *Store) GetEngagementByID(ctx context.Context, id uuid.UUID) (*models.Engagement, error) {
+	var e models.Engagement
+	err := s.pool.QueryRow(ctx,
+		`SELECT id, org_id, client_name, authz_ref, starts_at, ends_at, status, created_at
+		 FROM engagements WHERE id=$1`, id,
+	).Scan(&e.ID, &e.OrgID, &e.ClientName, &e.AuthzRef, &e.StartsAt, &e.EndsAt, &e.Status, &e.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
 func (s *Store) SetEngagementStatus(ctx context.Context, orgID, id uuid.UUID, status models.EngagementStatus) error {
 	ct, err := s.pool.Exec(ctx,
 		`UPDATE engagements SET status=$1 WHERE org_id=$2 AND id=$3`, string(status), orgID, id)

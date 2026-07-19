@@ -184,14 +184,14 @@ func (s *Store) CampaignTargetByRID(ctx context.Context, rid string) (*models.Ca
 	var t models.Target
 	err := s.pool.QueryRow(ctx,
 		`SELECT ct.id,ct.campaign_id,ct.target_id,ct.rid,ct.status,
-		        c.id,c.engagement_id,c.landing_page_id,
+		        c.id,c.engagement_id,c.landing_page_id,c.status,
 		        t.id,t.email,t.first_name,t.last_name
 		 FROM campaign_targets ct
 		 JOIN campaigns c ON c.id=ct.campaign_id
 		 JOIN targets t ON t.id=ct.target_id
 		 WHERE ct.rid=$1`, rid,
 	).Scan(&ct.ID, &ct.CampaignID, &ct.TargetID, &ct.RID, &ct.Status,
-		&c.ID, &c.EngagementID, &c.LandingPageID,
+		&c.ID, &c.EngagementID, &c.LandingPageID, &c.Status,
 		&t.ID, &t.Email, &t.FirstName, &t.LastName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, nil, ErrNotFound

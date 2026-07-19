@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/furkan-enes-polatoglu/phishforge/internal/auth"
 	"github.com/furkan-enes-polatoglu/phishforge/internal/config"
@@ -63,13 +64,23 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-// resolve validates the RID signature then loads the campaign target.
+// resolve validates the RID signature, loads the campaign target, and checks
+// that the campaign/engagement is still allowed to serve tracking content —
+// stopping a campaign or closing/expiring its engagement immediately cuts off
+// access to an already-sent link, it doesn't keep working forever.
 func (s *Server) resolve(ctx context.Context, rid string) (*models.CampaignTarget, *models.Campaign, *models.Target, bool) {
 	if _, err := auth.VerifyRID(s.cfg.RIDSecret, rid); err != nil {
 		return nil, nil, nil, false
 	}
 	ct, c, t, err := s.st.CampaignTargetByRID(ctx, rid)
 	if err != nil {
+		return nil, nil, nil, false
+	}
+	eng, err := s.st.GetEngagementByID(ctx, c.EngagementID)
+	if err != nil {
+		return nil, nil, nil, false
+	}
+	if !campaignServable(*eng, *c, time.Now()) {
 		return nil, nil, nil, false
 	}
 	return ct, c, t, true
@@ -201,7 +212,7 @@ func (s *Server) handleScan(w http.ResponseWriter, r *http.Request) {
 // embedded in an email via <img src="{{.QRCodeURL}}">.
 func (s *Server) handleQRImage(w http.ResponseWriter, r *http.Request) {
 	rid := chi.URLParam(r, "rid")
-	if _, err := auth.VerifyRID(s.cfg.RIDSecret, rid); err != nil {
+	if _, _, _, ok := s.resolve(r.Context(), rid); !ok {
 		http.NotFound(w, r)
 		return
 	}
@@ -240,13 +251,16 @@ func (s *Server) handleAttachment(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleReport(w http.ResponseWriter, r *http.Request) {
 	rid := chi.URLParam(r, "rid")
-	if ct, c, t, ok := s.resolve(r.Context(), rid); ok {
-		_ = s.st.RecordEvent(r.Context(), &models.Event{
-			CampaignTargetID: ct.ID, Type: models.EventReport,
-			IP: clientIP(r), UserAgent: r.UserAgent(),
-		})
-		s.notifyEvent(c.ID, "report", t.Email)
+	ct, c, t, ok := s.resolve(r.Context(), rid)
+	if !ok {
+		http.NotFound(w, r)
+		return
 	}
+	_ = s.st.RecordEvent(r.Context(), &models.Event{
+		CampaignTargetID: ct.ID, Type: models.EventReport,
+		IP: clientIP(r), UserAgent: r.UserAgent(),
+	})
+	s.notifyEvent(c.ID, "report", t.Email)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(`<!doctype html><meta charset="utf-8"><title>Thank you</title>
 <div style="font-family:sans-serif;max-width:520px;margin:80px auto;text-align:center">

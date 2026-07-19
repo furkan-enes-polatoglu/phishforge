@@ -196,18 +196,19 @@ func injectBaseHref(html, origin string) string {
 // ---- Sending profiles ----
 
 type sendingProfileReq struct {
-	Name         string `json:"name"`
-	SMTPHost     string `json:"smtp_host"`
-	SMTPPort     int    `json:"smtp_port"`
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	FromAddress  string `json:"from_address"`
-	FromName     string `json:"from_name"`
-	UseTLS       bool   `json:"use_tls"`
-	DKIMDomain   string `json:"dkim_domain"`
-	DKIMSelector string `json:"dkim_selector"`
-	SignDKIM     bool   `json:"sign_dkim"`
-	XMailer      string `json:"x_mailer"`
+	Name           string `json:"name"`
+	SMTPHost       string `json:"smtp_host"`
+	SMTPPort       int    `json:"smtp_port"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	FromAddress    string `json:"from_address"`
+	FromName       string `json:"from_name"`
+	UseTLS         bool   `json:"use_tls"`
+	DKIMDomain     string `json:"dkim_domain"`
+	DKIMSelector   string `json:"dkim_selector"`
+	SignDKIM       bool   `json:"sign_dkim"`
+	XMailer        string `json:"x_mailer"`
+	LandingBaseURL string `json:"landing_base_url"`
 }
 
 func (s *Server) handleCreateSendingProfile(w http.ResponseWriter, r *http.Request) {
@@ -229,6 +230,7 @@ func (s *Server) handleCreateSendingProfile(w http.ResponseWriter, r *http.Reque
 		Username: req.Username, Password: req.Password, FromAddress: req.FromAddress,
 		FromName: req.FromName, UseTLS: req.UseTLS,
 		DKIMDomain: req.DKIMDomain, DKIMSelector: req.DKIMSelector, SignDKIM: req.SignDKIM, XMailer: req.XMailer,
+		LandingBaseURL: strings.TrimRight(req.LandingBaseURL, "/"),
 	}
 	if err := s.st.CreateSendingProfile(r.Context(), prof); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

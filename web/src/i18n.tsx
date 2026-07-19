@@ -145,6 +145,11 @@ const dict: Record<string, { tr: string; en: string }> = {
   leave_blank_keep: { tr: "(boş bırakırsanız mevcut korunur)", en: "(leave blank to keep current)" },
   x_mailer: { tr: "Posta istemcisi başlığı (X-Mailer)", en: "Mail client header (X-Mailer)" },
   x_mailer_help: { tr: "Gerçek bir e-posta istemcisi gibi görünmesi için (opsiyonel), örn. \"Microsoft Outlook 16.0\"", en: "Optional, makes the message look like it came from a real client, e.g. \"Microsoft Outlook 16.0\"" },
+  landing_base_url: { tr: "Bu müşteriye özel landing/izleme alan adı", en: "Client-specific landing/tracking domain" },
+  landing_base_url_help: {
+    tr: "Her müşteri için ayrı domain satın alıyorsanız (site + SMTP aynı domainde), bu profille gönderilen e-postalardaki tüm takip linkleri ({{.TrackURL}}, {{.QRCodeURL}} vb.) bu domaini kullanır. Boş bırakılırsa genel PHISH_BASE_URL kullanılır. DNS A kaydını sunucunuza yönlendirmeyi ve TLS'i unutmayın.",
+    en: "If you buy a fresh domain per client (website + SMTP on the same domain), all tracking links in emails sent with this profile use this domain instead of the global default. Leave blank to use the instance-wide PHISH_BASE_URL. Remember to point its DNS A record at your server and set up TLS.",
+  },
   dkim_signing: { tr: "DKIM imzalama (teslimat)", en: "DKIM signing (deliverability)" },
   dkim_help: { tr: "DKIM, yetkili göndericiler için teslimatı artıran standart bir kimlik doğrulamadır. Anahtar üretin ve DNS TXT kaydını yayınlayın.", en: "DKIM is a standard authentication that improves deliverability for authorized senders. Generate a key and publish the DNS TXT record." },
   dkim_domain: { tr: "DKIM alan adı", en: "DKIM domain" },

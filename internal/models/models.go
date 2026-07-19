@@ -97,6 +97,12 @@ type SendingProfile struct {
 	DKIMPrivateKey string `json:"-"` // never serialized
 	SignDKIM       bool   `json:"sign_dkim"`
 	XMailer        string    `json:"x_mailer"` // realistic mail-client header, e.g. "Microsoft Outlook 16.0"
+	// LandingBaseURL overrides the global PHISH_BASE_URL for tracking/landing
+	// links (TrackURL, TrackPixel, QRCodeURL, AttachmentURL, ReportURL) in
+	// campaigns sent with this profile — for operators who buy a fresh domain
+	// per client engagement and want that client's links on that client's own
+	// domain. Empty falls back to the instance-wide default.
+	LandingBaseURL string    `json:"landing_base_url"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 

@@ -153,6 +153,26 @@ allowlist is what actually makes this land, not authentication tricks.
   (explicitly opt-in, redacted unless enabled, UI warns when it's on).
 - Every privileged action is written to an **append-only audit log**.
 - Multi-tenant with role-based access (admin / operator / viewer).
+- **Stopping a campaign immediately cuts off access to its links.** The
+  tracking server checks the campaign's status (and its engagement's) on
+  every request — an already-sent landing page/pixel/QR/report link stops
+  resolving the moment you stop the campaign or the engagement closes/expires.
+  A link from a *completed* (not stopped) campaign keeps working, so late
+  clicks within an active engagement are still tracked correctly.
+
+## Per-client landing domain
+
+If you buy a fresh domain per engagement (website + SMTP on that same
+domain — a common workflow for agencies running back-to-back client
+simulations), set **Landing/tracking domain** on that client's sending
+profile. Every tracking link (`{{.TrackURL}}`, `{{.QRCodeURL}}`,
+`{{.AttachmentURL}}`, `{{.ReportURL}}`) in campaigns sent with that profile
+uses that domain instead of the instance-wide default — no code change
+needed. The tracking server itself is already Host-header-agnostic (it
+resolves purely from the signed `rid` in the path), so pointing a new
+domain's DNS A record at your server and adding a reverse-proxy site block
+(Caddy's `on_demand_tls` handles this without editing config per domain) is
+all that's required per new client domain.
 
 ## Also included
 

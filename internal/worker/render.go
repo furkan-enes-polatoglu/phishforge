@@ -57,6 +57,17 @@ func RewriteLinks(html, trackURL string) string {
 	return reAnchorHref.ReplaceAllString(html, repl)
 }
 
+// effectiveLandingBase picks the base URL used to build tracking/landing links
+// for a send: the sending profile's own LandingBaseURL if set (the per-client
+// domain workflow — a fresh domain bought per engagement), otherwise the
+// instance-wide default from config.
+func effectiveLandingBase(profile *models.SendingProfile, globalDefault string) string {
+	if profile != nil && profile.LandingBaseURL != "" {
+		return strings.TrimRight(profile.LandingBaseURL, "/")
+	}
+	return globalDefault
+}
+
 func buildData(t models.Target, phishBase, rid string) TemplateData {
 	escRID := url.PathEscape(rid)
 	return TemplateData{
