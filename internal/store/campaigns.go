@@ -12,7 +12,7 @@ import (
 
 // Columns qualified with the "c" alias so queries that JOIN engagements (which
 // also has id/created_at) are unambiguous. All campaign queries alias campaigns AS c.
-const campaignCols = `c.id,c.engagement_id,c.name,c.email_template_id,c.landing_page_id,c.sending_profile_id,c.status,c.launch_at,c.rate_per_minute,c.send_window_start,c.send_window_end,c.business_days_only,c.jitter_seconds,c.warmup_batch,c.rewrite_links,c.spoofed_from_name,c.spoofed_from_address,c.reply_to,c.created_at`
+const campaignCols = `c.id,c.engagement_id,c.name,c.email_template_id,c.landing_page_id,c.sending_profile_id,c.status,c.launch_at,c.rate_per_minute,c.send_window_start,c.send_window_end,c.business_days_only,c.jitter_seconds,c.warmup_batch,c.rewrite_links,c.spoofed_from_name,c.spoofed_from_address,c.reply_to,c.landing_base_url,c.created_at`
 
 func scanCampaign(row interface {
 	Scan(dest ...any) error
@@ -20,16 +20,17 @@ func scanCampaign(row interface {
 	return row.Scan(&c.ID, &c.EngagementID, &c.Name, &c.EmailTemplateID, &c.LandingPageID,
 		&c.SendingProfileID, &c.Status, &c.LaunchAt, &c.RatePerMinute,
 		&c.SendWindowStart, &c.SendWindowEnd, &c.BusinessDaysOnly, &c.JitterSeconds,
-		&c.WarmupBatch, &c.RewriteLinks, &c.SpoofedFromName, &c.SpoofedFromAddress, &c.ReplyTo, &c.CreatedAt)
+		&c.WarmupBatch, &c.RewriteLinks, &c.SpoofedFromName, &c.SpoofedFromAddress, &c.ReplyTo,
+		&c.LandingBaseURL, &c.CreatedAt)
 }
 
 func (s *Store) CreateCampaign(ctx context.Context, c *models.Campaign) error {
 	return s.pool.QueryRow(ctx,
-		`INSERT INTO campaigns(engagement_id,name,email_template_id,landing_page_id,sending_profile_id,status,launch_at,rate_per_minute,send_window_start,send_window_end,business_days_only,jitter_seconds,warmup_batch,rewrite_links,spoofed_from_name,spoofed_from_address,reply_to)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id, created_at`,
+		`INSERT INTO campaigns(engagement_id,name,email_template_id,landing_page_id,sending_profile_id,status,launch_at,rate_per_minute,send_window_start,send_window_end,business_days_only,jitter_seconds,warmup_batch,rewrite_links,spoofed_from_name,spoofed_from_address,reply_to,landing_base_url)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id, created_at`,
 		c.EngagementID, c.Name, c.EmailTemplateID, c.LandingPageID, c.SendingProfileID, string(c.Status), c.LaunchAt, c.RatePerMinute,
 		c.SendWindowStart, c.SendWindowEnd, c.BusinessDaysOnly, c.JitterSeconds, c.WarmupBatch, c.RewriteLinks,
-		c.SpoofedFromName, c.SpoofedFromAddress, c.ReplyTo,
+		c.SpoofedFromName, c.SpoofedFromAddress, c.ReplyTo, c.LandingBaseURL,
 	).Scan(&c.ID, &c.CreatedAt)
 }
 

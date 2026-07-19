@@ -93,8 +93,15 @@ export default function EngagementDetail() {
     name: "", email_template_id: "", landing_page_id: "", sending_profile_id: "",
     rate_per_minute: 30, launch_at: "", send_window_start: 0, send_window_end: 24,
     business_days_only: false, jitter_seconds: 0, warmup_batch: 0, rewrite_links: true,
-    spoofed_from_name: "", spoofed_from_address: "", reply_to: "",
+    spoofed_from_name: "", spoofed_from_address: "", reply_to: "", landing_base_url: "",
   });
+  // When a sending profile is picked, pre-fill the campaign's landing URL from
+  // that profile's own domain — GoPhish-style "URL" field, except pre-filled
+  // instead of retyped every launch. The operator can still edit it freely.
+  function pickSendingProfile(id: string) {
+    const profile = assets.profiles.find((p: any) => p.id === id);
+    setCamp((c: any) => ({ ...c, sending_profile_id: id, landing_base_url: profile?.landing_base_url || "" }));
+  }
   async function createCampaign(e: React.FormEvent) {
     e.preventDefault(); setMsg("");
     const body: any = { ...camp };
@@ -199,7 +206,12 @@ export default function EngagementDetail() {
           <Field label={t("name")}><input className="input" value={camp.name} onChange={(e) => setCamp({ ...camp, name: e.target.value })} required /></Field>
           <Select label={t("email_template")} value={camp.email_template_id} onChange={(v) => setCamp({ ...camp, email_template_id: v })} options={assets.templates} />
           <Select label={t("landing_page")} value={camp.landing_page_id} onChange={(v) => setCamp({ ...camp, landing_page_id: v })} options={assets.landing} />
-          <Select label={t("sending_profile")} value={camp.sending_profile_id} onChange={(v) => setCamp({ ...camp, sending_profile_id: v })} options={assets.profiles} />
+          <Select label={t("sending_profile")} value={camp.sending_profile_id} onChange={pickSendingProfile} options={assets.profiles} />
+          <div className="sm:col-span-3">
+            <label className="label">{t("campaign_url")}</label>
+            <input className="input" placeholder="https://portal.musteri-domaini.com" value={camp.landing_base_url} onChange={(e) => setCamp({ ...camp, landing_base_url: e.target.value })} />
+            <p className="mt-1 text-xs muted">{t("campaign_url_help")}</p>
+          </div>
           <Field label={t("rate_per_min")}><input className="input" type="number" value={camp.rate_per_minute} onChange={(e) => setCamp({ ...camp, rate_per_minute: +e.target.value })} /></Field>
           <Field label={t("schedule_optional")}><input className="input" type="datetime-local" value={camp.launch_at} onChange={(e) => setCamp({ ...camp, launch_at: e.target.value })} /></Field>
           <Field label={t("window_start")}><input className="input" type="number" min={0} max={23} value={camp.send_window_start} onChange={(e) => setCamp({ ...camp, send_window_start: +e.target.value })} /></Field>

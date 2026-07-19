@@ -58,10 +58,16 @@ func RewriteLinks(html, trackURL string) string {
 }
 
 // effectiveLandingBase picks the base URL used to build tracking/landing links
-// for a send: the sending profile's own LandingBaseURL if set (the per-client
-// domain workflow — a fresh domain bought per engagement), otherwise the
-// instance-wide default from config.
-func effectiveLandingBase(profile *models.SendingProfile, globalDefault string) string {
+// for a send, in priority order:
+//  1. an explicit per-campaign override (like GoPhish's per-launch "URL" field)
+//  2. the sending profile's own domain (the per-client-domain workflow — a
+//     fresh domain bought per engagement, set once and reused by every
+//     campaign that uses that profile)
+//  3. the instance-wide default from config
+func effectiveLandingBase(campaignOverride string, profile *models.SendingProfile, globalDefault string) string {
+	if campaignOverride != "" {
+		return strings.TrimRight(campaignOverride, "/")
+	}
 	if profile != nil && profile.LandingBaseURL != "" {
 		return strings.TrimRight(profile.LandingBaseURL, "/")
 	}

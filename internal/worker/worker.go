@@ -201,7 +201,7 @@ func (w *Worker) processLaunch(ctx context.Context, job queue.LaunchJob) error {
 			continue
 		}
 
-		data := buildData(t, effectiveLandingBase(profile, w.cfg.PhishBaseURL), ct.RID)
+		data := buildData(t, effectiveLandingBase(c.LandingBaseURL, profile, w.cfg.PhishBaseURL), ct.RID)
 		htmlBody, err := Render(tpl.HTML, data)
 		if err != nil {
 			_ = w.st.SetCampaignTargetStatus(ctx, ct.ID, "error", "render: "+err.Error())

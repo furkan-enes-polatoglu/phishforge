@@ -103,6 +103,11 @@ const dict: Record<string, { tr: string; en: string }> = {
   stop: { tr: "Durdur", en: "Stop" },
   report: { tr: "Rapor", en: "Report" },
   select: { tr: "— seçin —", en: "— select —" },
+  campaign_url: { tr: "Bu kampanya için URL", en: "URL for this campaign" },
+  campaign_url_help: {
+    tr: "Seçilen gönderim profilinin domain'i otomatik doldu; isterseniz sadece bu kampanya için farklı bir domain yazabilirsiniz (GoPhish'teki \"URL\" alanı gibi). Hedeflerin bu adrese erişebilmesi için DNS A kaydının ve TLS'in kurulu olması gerekir.",
+    en: "Pre-filled from the selected sending profile's domain; you can type a different one for just this campaign (like GoPhish's \"URL\" field). Requires a DNS A record and TLS for that domain, reachable by targets.",
+  },
 
   // risk
   risk_scores: { tr: "Kullanıcı risk skorları", en: "User risk scores" },

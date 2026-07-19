@@ -174,6 +174,10 @@ domain's DNS A record at your server and adding a reverse-proxy site block
 (Caddy's `on_demand_tls` handles this without editing config per domain) is
 all that's required per new client domain.
 
+A campaign can also override its sending profile's domain for just that one
+launch — pre-filled from the profile when you pick it, editable per campaign,
+the same idea as GoPhish's per-launch "URL" field.
+
 ## Also included
 
 Turkish-first UI (with an English base and a login-screen language switch),

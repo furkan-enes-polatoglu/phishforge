@@ -180,7 +180,12 @@ type Campaign struct {
 	SpoofedFromName    string    `json:"spoofed_from_name"`
 	SpoofedFromAddress string    `json:"spoofed_from_address"`
 	ReplyTo            string    `json:"reply_to"`
-	CreatedAt          time.Time `json:"created_at"`
+	// LandingBaseURL overrides the sending profile's own landing domain for
+	// this campaign only — like GoPhish's per-launch "URL" field, except
+	// pre-filled from the profile's default instead of retyped every time.
+	// Empty means "use the sending profile's domain."
+	LandingBaseURL string    `json:"landing_base_url"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // InSendWindow reports whether "now" (in the given location) is within the

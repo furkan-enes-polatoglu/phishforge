@@ -31,6 +31,10 @@ type createCampaignReq struct {
 	SpoofedFromName    string `json:"spoofed_from_name"`
 	SpoofedFromAddress string `json:"spoofed_from_address"`
 	ReplyTo            string `json:"reply_to"`
+	// LandingBaseURL optionally overrides the sending profile's own landing
+	// domain for this campaign only (like GoPhish's per-launch "URL" field).
+	// Empty means "use the sending profile's domain."
+	LandingBaseURL string `json:"landing_base_url"`
 }
 
 func (s *Server) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +88,7 @@ func (s *Server) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 		BusinessDaysOnly: req.BusinessDaysOnly, JitterSeconds: req.JitterSeconds,
 		WarmupBatch: req.WarmupBatch, RewriteLinks: req.RewriteLinks,
 		SpoofedFromName: req.SpoofedFromName, SpoofedFromAddress: req.SpoofedFromAddress, ReplyTo: req.ReplyTo,
+		LandingBaseURL: strings.TrimRight(req.LandingBaseURL, "/"),
 	}
 	if err := s.st.CreateCampaign(r.Context(), c); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
