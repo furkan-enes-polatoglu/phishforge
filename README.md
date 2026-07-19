@@ -82,9 +82,11 @@ provider-specific code involved. Raw SMTP is fire-and-forget, though: a
 `250 OK` only means the relay *accepted* the message, not that it reached the
 inbox. For Mailgun specifically, PhishForge closes that loop:
 
-- Every outbound message carries an `X-Mailgun-Variables` header with a
-  correlation id — a header Mailgun recognizes on plain SMTP submissions (no
-  API integration required) and echoes back on webhook events.
+- When the sending profile's SMTP host is Mailgun's relay, every outbound
+  message carries an `X-Mailgun-Variables` header with a correlation id — a
+  header Mailgun recognizes on plain SMTP submissions (no API integration
+  required) and echoes back on webhook events. It's omitted entirely for
+  non-Mailgun profiles, where it would serve no purpose.
 - A **signed webhook receiver** (`POST /webhooks/mailgun`, HMAC-verified
   against your Mailgun webhook signing key) ingests `delivered` / `failed`
   (bounce) / `complained` events in real time, matched back to the exact

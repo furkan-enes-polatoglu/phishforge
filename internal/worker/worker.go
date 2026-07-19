@@ -223,7 +223,12 @@ func (w *Worker) processLaunch(ctx context.Context, job queue.LaunchJob) error {
 			HeaderFrom: c.SpoofedFromAddress, HeaderFromName: c.SpoofedFromName,
 			To: t.Email, Subject: subject, HTML: htmlBody, Text: textBody,
 			Unsubscribe: data.ReportURL, XMailer: profile.XMailer, ReplyTo: c.ReplyTo,
-			Variables: map[string]string{"cid": ct.ID.String()},
+		}
+		// Only attach the Mailgun correlation header when actually sending
+		// through Mailgun — on any other server it would serve no purpose and
+		// would just ride along into the delivered message unconsumed.
+		if isMailgunSMTP(profile.SMTPHost) {
+			msg.Variables = map[string]string{"cid": ct.ID.String()}
 		}
 		if err := Send(profile, msg); err != nil {
 			_ = w.st.SetCampaignTargetStatus(ctx, ct.ID, "error", err.Error())

@@ -63,6 +63,14 @@ func domainOf(addr string) string {
 	return ""
 }
 
+// isMailgunSMTP reports whether an SMTP host is Mailgun's relay (e.g.
+// smtp.mailgun.org, smtp.eu.mailgun.org). Used to gate the
+// X-Mailgun-Variables correlation header so it's only ever attached when
+// there's an actual Mailgun account on the other end to consume it.
+func isMailgunSMTP(host string) bool {
+	return strings.Contains(strings.ToLower(host), "mailgun.org")
+}
+
 // Build renders a well-formed RFC5322 multipart/alternative message with the
 // headers that legitimate mail carries (Message-ID, Date, MIME-Version, and an
 // optional List-Unsubscribe) — these improve deliverability for authorized senders.
