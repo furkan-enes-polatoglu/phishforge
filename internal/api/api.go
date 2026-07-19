@@ -200,5 +200,5 @@ a{color:#60a5fa}</style></head><body><div class="wrap">
 <h1>🎣 PhishForge API</h1>
 <p>The admin API is running. The frontend build was not found at <code>WEB_DIST</code>.</p>
 <p>Health: <a href="/healthz">/healthz</a> · API base: <code>/api</code></p>
-<p>Authorized phishing-simulation &amp; security-awareness platform.</p>
+<p>Advanced phishing simulation &amp; security awareness platform.</p>
 </div></body></html>`

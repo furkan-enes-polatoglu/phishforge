@@ -24,7 +24,7 @@ const dict: Record<string, { tr: string; en: string }> = {
   logout: { tr: "Çıkış", en: "Log out" },
 
   // login
-  login_subtitle: { tr: "Yetkili oltalama simülasyonu ve farkındalık platformu", en: "Authorized phishing-simulation & awareness platform" },
+  login_subtitle: { tr: "Gelişmiş Oltalama Simülasyonu ve Güvenlik Farkındalık Platformu", en: "Advanced Phishing Simulation & Security Awareness Platform" },
   email: { tr: "E-posta", en: "Email" },
   password: { tr: "Parola", en: "Password" },
   sign_in: { tr: "Giriş yap", en: "Sign in" },

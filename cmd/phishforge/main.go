@@ -5,7 +5,7 @@
 //	api      serve the admin API + SPA and the phishing/tracking server
 //	worker   consume launch jobs and send campaign email
 //
-// PhishForge is an authorized phishing-simulation & security-awareness platform.
+// PhishForge is an advanced phishing simulation & security awareness platform.
 package main
 
 import (
